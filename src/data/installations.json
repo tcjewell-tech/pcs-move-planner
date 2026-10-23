@@ -1,0 +1,573 @@
+[
+ {
+  "id": "bragg",
+  "name": "Fort Bragg",
+  "aliases": [
+   "Fort Liberty",
+   "Fayetteville",
+   "Pope Army Airfield"
+  ],
+  "state": "NC",
+  "zip": "28310",
+  "lat": 35.1392,
+  "lon": -78.9992
+ },
+ {
+  "id": "campbell",
+  "name": "Fort Campbell",
+  "aliases": [
+   "Clarksville",
+   "Hopkinsville"
+  ],
+  "state": "KY",
+  "zip": "42223",
+  "lat": 36.65,
+  "lon": -87.4667
+ },
+ {
+  "id": "hood",
+  "name": "Fort Hood",
+  "aliases": [
+   "Fort Cavazos",
+   "Killeen"
+  ],
+  "state": "TX",
+  "zip": "76544",
+  "lat": 31.1397,
+  "lon": -97.7658
+ },
+ {
+  "id": "benning",
+  "name": "Fort Benning",
+  "aliases": [
+   "Fort Moore",
+   "Columbus"
+  ],
+  "state": "GA",
+  "zip": "31905",
+  "lat": 32.3661,
+  "lon": -84.9692
+ },
+ {
+  "id": "gordon",
+  "name": "Fort Gordon",
+  "aliases": [
+   "Fort Eisenhower",
+   "Augusta"
+  ],
+  "state": "GA",
+  "zip": "30905",
+  "lat": 33.4133,
+  "lon": -82.1353
+ },
+ {
+  "id": "lee",
+  "name": "Fort Lee",
+  "aliases": [
+   "Fort Gregg-Adams",
+   "Petersburg"
+  ],
+  "state": "VA",
+  "zip": "23801",
+  "lat": 37.235,
+  "lon": -77.3328
+ },
+ {
+  "id": "polk",
+  "name": "Fort Polk",
+  "aliases": [
+   "Fort Johnson",
+   "JRTC",
+   "Leesville"
+  ],
+  "state": "LA",
+  "zip": "71459",
+  "lat": 31.0726,
+  "lon": -93.0806
+ },
+ {
+  "id": "rucker",
+  "name": "Fort Rucker",
+  "aliases": [
+   "Fort Novosel",
+   "Ozark",
+   "Enterprise"
+  ],
+  "state": "AL",
+  "zip": "36362",
+  "lat": 31.3375,
+  "lon": -85.7111
+ },
+ {
+  "id": "aphill",
+  "name": "Fort A.P. Hill",
+  "aliases": [
+   "Fort Walker",
+   "Fort AP Hill",
+   "Bowling Green"
+  ],
+  "state": "VA",
+  "zip": "22427",
+  "lat": 38.1178,
+  "lon": -77.2764
+ },
+ {
+  "id": "bliss",
+  "name": "Fort Bliss",
+  "aliases": [
+   "El Paso"
+  ],
+  "state": "TX",
+  "zip": "79916",
+  "lat": 31.8018,
+  "lon": -106.4246
+ },
+ {
+  "id": "carson",
+  "name": "Fort Carson",
+  "aliases": [
+   "Colorado Springs"
+  ],
+  "state": "CO",
+  "zip": "80913",
+  "lat": 38.725,
+  "lon": -104.7681
+ },
+ {
+  "id": "riley",
+  "name": "Fort Riley",
+  "aliases": [
+   "Junction City",
+   "Manhattan"
+  ],
+  "state": "KS",
+  "zip": "66442",
+  "lat": 39.1,
+  "lon": -96.8167
+ },
+ {
+  "id": "leavenworth",
+  "name": "Fort Leavenworth",
+  "aliases": [
+   "Leavenworth",
+   "CGSC"
+  ],
+  "state": "KS",
+  "zip": "66027",
+  "lat": 39.355,
+  "lon": -94.9211
+ },
+ {
+  "id": "sill",
+  "name": "Fort Sill",
+  "aliases": [
+   "Lawton"
+  ],
+  "state": "OK",
+  "zip": "73503",
+  "lat": 34.6711,
+  "lon": -98.3897
+ },
+ {
+  "id": "leonardwood",
+  "name": "Fort Leonard Wood",
+  "aliases": [
+   "FLW",
+   "Waynesville"
+  ],
+  "state": "MO",
+  "zip": "65473",
+  "lat": 37.7725,
+  "lon": -92.1139
+ },
+ {
+  "id": "stewart",
+  "name": "Fort Stewart",
+  "aliases": [
+   "Hinesville"
+  ],
+  "state": "GA",
+  "zip": "31314",
+  "lat": 31.88,
+  "lon": -81.6075
+ },
+ {
+  "id": "hunter",
+  "name": "Hunter Army Airfield",
+  "aliases": [
+   "HAAF",
+   "Savannah"
+  ],
+  "state": "GA",
+  "zip": "31409",
+  "lat": 32.01,
+  "lon": -81.1456
+ },
+ {
+  "id": "drum",
+  "name": "Fort Drum",
+  "aliases": [
+   "Watertown"
+  ],
+  "state": "NY",
+  "zip": "13602",
+  "lat": 44.0542,
+  "lon": -75.7869
+ },
+ {
+  "id": "jackson",
+  "name": "Fort Jackson",
+  "aliases": [
+   "Columbia"
+  ],
+  "state": "SC",
+  "zip": "29207",
+  "lat": 34.0392,
+  "lon": -80.8222
+ },
+ {
+  "id": "knox",
+  "name": "Fort Knox",
+  "aliases": [
+   "Radcliff",
+   "Elizabethtown"
+  ],
+  "state": "KY",
+  "zip": "40121",
+  "lat": 37.9,
+  "lon": -85.95
+ },
+ {
+  "id": "huachuca",
+  "name": "Fort Huachuca",
+  "aliases": [
+   "Sierra Vista"
+  ],
+  "state": "AZ",
+  "zip": "85613",
+  "lat": 31.5554,
+  "lon": -110.3498
+ },
+ {
+  "id": "irwin",
+  "name": "Fort Irwin",
+  "aliases": [
+   "NTC",
+   "National Training Center",
+   "Barstow"
+  ],
+  "state": "CA",
+  "zip": "92310",
+  "lat": 35.2464,
+  "lon": -116.6819
+ },
+ {
+  "id": "wainwright",
+  "name": "Fort Wainwright",
+  "aliases": [
+   "Fairbanks"
+  ],
+  "state": "AK",
+  "zip": "99703",
+  "lat": 64.8278,
+  "lon": -147.6428
+ },
+ {
+  "id": "greely",
+  "name": "Fort Greely",
+  "aliases": [
+   "Delta Junction"
+  ],
+  "state": "AK",
+  "zip": "99731",
+  "lat": 63.9731,
+  "lon": -145.7181
+ },
+ {
+  "id": "jber",
+  "name": "Joint Base Elmendorf-Richardson",
+  "aliases": [
+   "JBER",
+   "Fort Richardson",
+   "Elmendorf AFB",
+   "Anchorage"
+  ],
+  "state": "AK",
+  "zip": "99505",
+  "lat": 61.2514,
+  "lon": -149.8064
+ },
+ {
+  "id": "schofield",
+  "name": "Schofield Barracks",
+  "aliases": [
+   "Wahiawa",
+   "25th Infantry Division"
+  ],
+  "state": "HI",
+  "zip": "96857",
+  "lat": 21.4978,
+  "lon": -158.0633
+ },
+ {
+  "id": "shafter",
+  "name": "Fort Shafter",
+  "aliases": [
+   "USARPAC",
+   "Honolulu"
+  ],
+  "state": "HI",
+  "zip": "96858",
+  "lat": 21.345,
+  "lon": -157.884
+ },
+ {
+  "id": "jblm",
+  "name": "Joint Base Lewis-McChord",
+  "aliases": [
+   "JBLM",
+   "Fort Lewis",
+   "McChord AFB",
+   "Tacoma"
+  ],
+  "state": "WA",
+  "zip": "98433",
+  "lat": 47.1058,
+  "lon": -122.5644
+ },
+ {
+  "id": "belvoir",
+  "name": "Fort Belvoir",
+  "aliases": [
+   "NCR",
+   "Alexandria"
+  ],
+  "state": "VA",
+  "zip": "22060",
+  "lat": 38.7197,
+  "lon": -77.1546
+ },
+ {
+  "id": "meade",
+  "name": "Fort George G. Meade",
+  "aliases": [
+   "Fort Meade",
+   "NCR"
+  ],
+  "state": "MD",
+  "zip": "20755",
+  "lat": 39.1069,
+  "lon": -76.7431
+ },
+ {
+  "id": "jbmhh",
+  "name": "Joint Base Myer-Henderson Hall",
+  "aliases": [
+   "JBM-HH",
+   "Fort Myer",
+   "Henderson Hall",
+   "Fort McNair",
+   "Arlington",
+   "NCR"
+  ],
+  "state": "VA",
+  "zip": "22211",
+  "lat": 38.8803,
+  "lon": -77.0797
+ },
+ {
+  "id": "pentagon",
+  "name": "The Pentagon",
+  "aliases": [
+   "Pentagon",
+   "HQDA",
+   "NCR",
+   "Washington DC",
+   "Arlington"
+  ],
+  "state": "VA",
+  "zip": "22202",
+  "lat": 38.8708,
+  "lon": -77.055
+ },
+ {
+  "id": "walterreed",
+  "name": "Walter Reed National Military Medical Center",
+  "aliases": [
+   "WRNMMC",
+   "Walter Reed",
+   "Bethesda",
+   "NCR"
+  ],
+  "state": "MD",
+  "zip": "20889",
+  "lat": 39.0017,
+  "lon": -77.0947
+ },
+ {
+  "id": "apg",
+  "name": "Aberdeen Proving Ground",
+  "aliases": [
+   "APG",
+   "Aberdeen"
+  ],
+  "state": "MD",
+  "zip": "21005",
+  "lat": 39.475,
+  "lon": -76.125
+ },
+ {
+  "id": "detrick",
+  "name": "Fort Detrick",
+  "aliases": [
+   "Frederick"
+  ],
+  "state": "MD",
+  "zip": "21702",
+  "lat": 39.4356,
+  "lon": -77.4272
+ },
+ {
+  "id": "carlisle",
+  "name": "Carlisle Barracks",
+  "aliases": [
+   "Army War College",
+   "USAWC",
+   "Carlisle"
+  ],
+  "state": "PA",
+  "zip": "17013",
+  "lat": 40.2103,
+  "lon": -77.1736
+ },
+ {
+  "id": "westpoint",
+  "name": "West Point (U.S. Military Academy)",
+  "aliases": [
+   "West Point",
+   "USMA",
+   "United States Military Academy"
+  ],
+  "state": "NY",
+  "zip": "10996",
+  "lat": 41.3925,
+  "lon": -73.9575
+ },
+ {
+  "id": "hamilton",
+  "name": "Fort Hamilton",
+  "aliases": [
+   "Brooklyn",
+   "New York City"
+  ],
+  "state": "NY",
+  "zip": "11252",
+  "lat": 40.6061,
+  "lon": -74.0308
+ },
+ {
+  "id": "redstone",
+  "name": "Redstone Arsenal",
+  "aliases": [
+   "Huntsville",
+   "AMC"
+  ],
+  "state": "AL",
+  "zip": "35898",
+  "lat": 34.6842,
+  "lon": -86.654
+ },
+ {
+  "id": "eustis",
+  "name": "Joint Base Langley-Eustis (Fort Eustis)",
+  "aliases": [
+   "JBLE",
+   "Fort Eustis",
+   "Newport News",
+   "TRADOC"
+  ],
+  "state": "VA",
+  "zip": "23604",
+  "lat": 37.1593,
+  "lon": -76.5752
+ },
+ {
+  "id": "jbsa",
+  "name": "Joint Base San Antonio-Fort Sam Houston",
+  "aliases": [
+   "JBSA",
+   "Fort Sam Houston",
+   "San Antonio"
+  ],
+  "state": "TX",
+  "zip": "78234",
+  "lat": 29.4575,
+  "lon": -98.44
+ },
+ {
+  "id": "macdill",
+  "name": "MacDill Air Force Base",
+  "aliases": [
+   "MacDill",
+   "MacDill AFB",
+   "Tampa",
+   "CENTCOM",
+   "SOCOM"
+  ],
+  "state": "FL",
+  "zip": "33621",
+  "lat": 27.8494,
+  "lon": -82.5211
+ },
+ {
+  "id": "wsmr",
+  "name": "White Sands Missile Range",
+  "aliases": [
+   "WSMR",
+   "Las Cruces"
+  ],
+  "state": "NM",
+  "zip": "88002",
+  "lat": 32.3356,
+  "lon": -106.4058
+ },
+ {
+  "id": "jbmdl",
+  "name": "Joint Base McGuire-Dix-Lakehurst",
+  "aliases": [
+   "JBMDL",
+   "Fort Dix",
+   "McGuire AFB",
+   "Lakehurst"
+  ],
+  "state": "NJ",
+  "zip": "08640",
+  "lat": 40.0156,
+  "lon": -74.5917
+ },
+ {
+  "id": "monterey",
+  "name": "Presidio of Monterey",
+  "aliases": [
+   "DLI",
+   "Defense Language Institute",
+   "Monterey"
+  ],
+  "state": "CA",
+  "zip": "93944",
+  "lat": 36.604,
+  "lon": -121.9117
+ },
+ {
+  "id": "ypg",
+  "name": "Yuma Proving Ground",
+  "aliases": [
+   "YPG",
+   "Yuma"
+  ],
+  "state": "AZ",
+  "zip": "85365",
+  "lat": 33.0178,
+  "lon": -114.2525
+ }
+]
