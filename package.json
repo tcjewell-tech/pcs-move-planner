@@ -11,7 +11,8 @@
     "test": "vitest run",
     "build:bah": "tsx scripts/build-bah.ts",
     "build:distances": "tsx scripts/build-distances.ts",
-    "build:data": "npm run build:bah && npm run build:distances"
+    "build:data": "npm run build:installations && npm run build:bah && npm run build:distances",
+    "build:installations": "tsx scripts/build-installations.ts"
   },
   "dependencies": {
     "react": "^19.3.1",
