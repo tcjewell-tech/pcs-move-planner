@@ -24,7 +24,7 @@ export const installations = installationsJson as Installation[]
 export const distances = distancesJson as { source: string; built: string; miles: Record<string, number | null> }
 
 // BAH data is built from the DoD download (npm run build:bah); the app still runs without it.
-const bahModules = import.meta.glob<{ default: Bah }>('../data/bah/bah.json', { eager: true })
+const bahModules = import.meta.glob<{ default: Bah }>('../data/bah/*.json', { eager: true })
 export const bah: Bah | null = Object.values(bahModules)[0]?.default ?? null
 
 export const BAH_LOOKUP_URL = 'https://militarypay.defense.gov/Pay/Basic-Allowance-for-Housing/BAH-Rate-Lookup/'

@@ -17,9 +17,11 @@ Status as of 2026-10-22. Items marked **OPEN** need a human check before you rel
 
 ## BAH (`src/data/bah/bah.json`)
 
-- **OPEN — not built yet.** The DoD site returns HTTP 403 to scripts. Waiting for the manual download into `data-raw/`.
-- **OPEN:** how O-7 and above are handled in the file.
-- **OPEN:** spot-check one figure per test scenario against the official lookup.
+- **Built from `BAH-ASCII-2026.zip`** (DTMO, downloaded manually on 2026-10-29): 338 MHAs and 40,959 ZIPs.
+- **The ZIP contains stale copies** (`… - old.txt`, `bahw_26.dat`). `build-bah.ts` reads only the plain `bahwYY.txt` names. Those are byte-identical to the `bahw26.dat` / `bahwo26.dat` files dated 2026-05-13, which include the **Abilene/Dyess AFB (TX270) temporary increase effective 16 May 2026**. If DoD ships a different layout next year, the script stops with an error instead of guessing.
+- **O-7 and above:** the files carry 27 rate columns, ending O-1…O-10, even though the 2003 format PDF stops at O-7. O-8, O-9 and O-10 equal O-7 in every MHA, in both files. The official lookup lists the grade as "O-7/O-7+", which matches.
+- **Every installation ZIP resolves to the expected MHA**, including the Pentagon (22202 → DC053 Washington DC Metro) and the three PO-box ZIPs (Greely → AK405 Fairbanks, Hamilton → NY219 New York City, Redstone → AL003 Huntsville). This closes the ZIP items above.
+- **Spot-checked against the official DoD lookup** (defensetravel.dod.mil/neorates, CY 2026) on 2026-10-29. All four match exactly. See the scenario table below and the TX270 row.
 
 ## Distances (`src/data/distances.json`)
 
@@ -39,4 +41,15 @@ Status as of 2026-10-22. Items marked **OPEN** need a human check before you rel
 
 ## Test scenarios
 
-**OPEN** — waiting on BAH data.
+All three scenarios ran end to end in the app on 2026-10-29: report date 2027-01-27, 10 days of leave, no PTDY, default day charging.
+
+| # | Move | Miles (OSRM) | Travel days | BAH current → gaining | Δ/month (Δ/year) | Official lookup spot-check |
+|---|---|---|---|---|---|---|
+| 1 | Fort Bragg → Fort Leavenworth, E-7 with deps | 1,108 | 4 (rem. 58 ≥ 51) | NC182 $2,094 → KS102 $2,229 | +$135 (+$1,620) | ZIP 28310, E-7: $2,094 / $1,722 ✅ |
+| 2 | Fort Belvoir → Fort Bragg, O-4 with deps | 315 | 1 | DC053 $4,410 → NC182 $2,427 | −$1,983 (−$23,796) | ZIP 22060, O-4: $4,410 / $3,855 ✅ |
+| 3 | Fort Campbell → JBLM, E-5 without deps | 2,370 | 7 (rem. 270) | KY106 $1,593 → WA311 $2,121 | +$528 (+$6,336) | ZIP 42223, E-5: $1,815 / $1,593 ✅ |
+| — | Mid-year correction check: Abilene TX270, E-7 | — | — | — | — | ZIP 79601: $2,844 / $2,133 ✅ (matches May file, not the stale copies) |
+
+Scenario 2 entered the gaining post by its former name, "Liberty", and the search resolved it to Fort Bragg.
+
+**Caution:** scenario 1 is only 7 miles above a travel-day boundary. If DTOD measures 1,100 miles or less, it drops to 3 days.

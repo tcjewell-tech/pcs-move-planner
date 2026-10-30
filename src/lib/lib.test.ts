@@ -59,3 +59,15 @@ describe('toIcs', () => {
     for (const line of ics.split('\r\n')) expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75)
   })
 })
+
+describe('bundled BAH data', () => {
+  it('resolves every installation to an MHA with rates for every grade', async () => {
+    const { bah, GRADES } = await import('./data')
+    expect(bah).not.toBeNull()
+    for (const i of installations) {
+      const r = bahFor(i)
+      expect(r, i.id).not.toBeNull()
+      for (const g of GRADES) expect(r!.with[g] > 0 && r!.without[g] > 0, `${i.id} ${g}`).toBe(true)
+    }
+  })
+})

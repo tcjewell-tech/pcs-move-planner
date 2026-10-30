@@ -38,6 +38,8 @@ npm run build:data
 | `build:bah` | `src/data/bah/bah.json` | The DoD BAH rate file in `data-raw/` |
 | `build:distances` | `src/data/distances.json` | Public OSRM server (router.project-osrm.org), 1 request/s. Responses are cached in `scripts/.cache/osrm/`, so a rerun only fetches new pairs. A first run takes about 35 minutes. |
 
+DoD sometimes reissues rates partway through the year (for example, the Abilene TX270 increase of May 2026). When it does, download the file again and rerun `npm run build:bah`. Keep only one ZIP in `data-raw/`.
+
 Review the reports the scripts print, and update `VERIFY.md`. When a post is renamed, edit `scripts/installations.seed.json`: put the new name in `name` and move the old name into `aliases`.
 
 ## Data sources
