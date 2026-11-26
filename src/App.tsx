@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { InstallationPicker } from './InstallationPicker'
 import { BAH_LOOKUP_URL, GRADES, bah, bahFor, bahStaleWarning, distances, drivingMiles, installations, isOconus, type Installation } from './lib/data'
 import { toIcs } from './lib/ics'
-import { DEFAULTS, HOUSE_HUNTING_MAX_DAYS, TLE_CONUS_MAX_DAYS, addDays, buildPlan, daysBetween, isPlanDate, isWeekend, povTravelDays, type Kind, type PtdyPlacement } from './lib/rules'
+import { DEFAULTS, HOUSE_HUNTING_MAX_DAYS, TLE_CONUS_MAX_DAYS, addDays, buildPlan, daysBetween, inputWarnings, isPlanDate, isWeekend, povTravelDays, povTravelSteps, type Kind, type PtdyPlacement } from './lib/rules'
 
 const today = new Date().toLocaleDateString('en-CA') // local YYYY-MM-DD
 const byId = (id: string) => installations.find((i) => i.id === id) ?? null
@@ -89,7 +89,7 @@ export default function App() {
     ? buildPlan({
         today, reportDate: report, travelDays, oconus,
         leaveDays: num(leaveDays), ptdyDays: num(ptdyDays), ptdyPlacement,
-        signOutDayWorked, signInDayNotCharged: signInNotCharged || reportWeekend,
+        signOutDayWorked, signInDayNotCharged: signInNotCharged,
         tleOld: num(tleOld), tleNew: num(tleNew),
         rentDueDay: rentDueDay === '' ? null : Math.min(31, Math.max(1, num(rentDueDay))),
         noticeDate: isPlanDate(noticeDate) ? noticeDate : null, vacateDate: isPlanDate(vacateDate) ? vacateDate : null,
@@ -101,10 +101,7 @@ export default function App() {
   const warnings = [
     ...(plan?.warnings ?? []),
     ...(staleBah ? [staleBah] : []),
-    ...(report ? [] : ['Enter a report date between 1900 and 2099 to build the timeline.']),
-    ...([noticeDate, vacateDate].some((d) => d && !isPlanDate(d)) ? ['A notice or vacate date outside 1900–2099 is ignored.'] : []),
-    ...(miles === null && from && to ? ['No road distance for this pair (e.g. Hawaii) — enter official DTOD miles; travel days and the timeline are not computed.'] : []),
-    ...[from, to].filter((i) => i?.unverified).map((i) => `${i!.name}: data unverified (${i!.unverified}).`),
+    ...inputWarnings({ reportDate, noticeDate, vacateDate, milesUnknown: miles === null && !!from && !!to, stations: [from, to].filter((i) => i !== null) }),
   ]
 
   const downloadIcs = () => {
@@ -213,10 +210,7 @@ export default function App() {
                   <div>
                     <dt className="font-medium">Formula (JTR par. 050205)</dt>
                     <dd className="font-mono text-xs">
-                      {Math.round(miles) <= 400 ? `${Math.round(miles)} mi ≤ 400 → 1 day` : <>
-                        {Math.round(miles)} ÷ 350 = {Math.floor(Math.round(miles) / 350)} remainder {Math.round(miles) % 350}<br />
-                        remainder {Math.round(miles) % 350} {Math.round(miles) % 350 >= 51 ? '≥ 51 → +1 day' : '< 51 → no extra day'}
-                      </>}
+                      {povTravelSteps(miles).map((line) => <span key={line} className="block">{line}</span>)}
                     </dd>
                   </div>
                   <div className="text-base"><dt className="inline font-medium">Authorized travel days: </dt><dd className="inline font-bold">{travelDays}</dd><Badge kind="regulatory limit" /></div>
@@ -256,7 +250,7 @@ export default function App() {
           {plan && (
             <Card title="Timeline">
               <p className="mb-3 text-sm">
-                Sign out <strong>{plan.signOut}</strong> · report <strong>{reportDate}</strong> · chargeable leave <strong>{plan.leave} day(s)</strong> (departure through report date, inclusive, minus {travelDays} travel{ptdyPlacement !== 'after-signin' && num(ptdyDays) > 0 ? ` and ${num(ptdyDays)} PTDY` : ''} day(s))
+                Sign out <strong>{plan.signOut}</strong> · report <strong>{reportDate}</strong> · chargeable leave <strong>{plan.leave} day(s)</strong> (departure through report date, inclusive, minus {travelDays} travel{plan.enRoutePtdy > 0 ? ` and ${plan.enRoutePtdy} PTDY` : ''} day(s))
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  DEFAULTS, addDays, buildPlan, chargeableLeave, daysBetween, isPlanDate, nextDueAfter, povTravelDays,
-  scraLatestNotice, scraTermination, signOutDate, tleCheck, type PlanInputs,
+  DEFAULTS, addDays, buildPlan, chargeableLeave, daysBetween, inputWarnings, isPlanDate, nextDueAfter, povTravelDays,
+  povTravelSteps, scraLatestNotice, scraTermination, signOutDate, tleCheck, type PlanInputs,
 } from './rules'
 
 describe('isPlanDate', () => {
@@ -15,6 +15,27 @@ describe('povTravelDays (JTR 050205)', () => {
     [400, 1], [401, 2], [750, 2], [751, 3], [1100, 3], [1101, 4],
     [1, 1], [420, 2], [700, 2], [1573, 5], [0, 0], [-5, 0], [400.4, 1], [400.5, 2],
   ])('%d mi → %d days', (miles, days) => expect(povTravelDays(miles)).toBe(days))
+})
+
+describe('povTravelSteps', () => {
+  it('shows the same arithmetic povTravelDays uses', () => {
+    expect(povTravelSteps(0)).toEqual(['0 mi → no travel days'])
+    expect(povTravelSteps(400)).toEqual(['400 mi ≤ 400 → 1 day'])
+    expect(povTravelSteps(1108)).toEqual(['1108 ÷ 350 = 3 remainder 58', 'remainder 58 ≥ 51 → +1 day'])
+    expect(povTravelSteps(750.4)).toEqual(['750 ÷ 350 = 2 remainder 50', 'remainder 50 < 51 → no extra day'])
+  })
+})
+
+describe('inputWarnings', () => {
+  const ok = { reportDate: '2027-01-15', noticeDate: '', vacateDate: '', milesUnknown: false, stations: [{ name: 'Fort Bragg' }] }
+  it('is silent for good input', () => expect(inputWarnings(ok)).toEqual([]))
+  it('reports unknown miles, bad dates and unverified stations', () => {
+    const w = inputWarnings({ reportDate: '', noticeDate: '202700-01-01', vacateDate: '', milesUnknown: true, stations: [{ name: 'Test Post', unverified: 'no coordinates' }] }).join('\n')
+    expect(w).toMatch(/No road distance/)
+    expect(w).toMatch(/Enter a report date/)
+    expect(w).toMatch(/notice or vacate date/)
+    expect(w).toMatch(/Test Post: data unverified \(no coordinates\)/)
+  })
 })
 
 describe('tleCheck (JTR 050601)', () => {
@@ -176,6 +197,11 @@ describe('buildPlan', () => {
     const ptdy = r.items.find((i) => i.label.startsWith('House-hunting'))!
     expect(ptdy.date).toBe(addDays(r.signOut, 1))
     expect(ptdy.label).toMatch(/confirm with S1/)
+  })
+  it('never charges a weekend report day', () => {
+    const r = buildPlan({ ...base, reportDate: '2027-01-16', signInDayNotCharged: false }) // a Saturday
+    expect(r.signOut).toBe(buildPlan({ ...base, reportDate: '2027-01-16', signInDayNotCharged: true }).signOut)
+    expect(daysBetween(r.signOut, '2027-01-16') + 1).toBe(14) // 10 leave + 3 travel + the uncharged report day
   })
   it('omits TLE windows for OCONUS', () => {
     expect(buildPlan({ ...base, oconus: true }).items.some((i) => i.label.startsWith('TLE'))).toBe(false)

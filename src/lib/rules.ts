@@ -19,6 +19,10 @@ export const isPlanDate = (s: string) => /^(19|20)\d{2}-\d{2}-\d{2}$/.test(s) &&
 
 // ─── 1. POV travel days ──────────────────────────────────────────────────────
 
+const FIRST_DAY_MILES = 400
+const MILES_PER_DAY = 350
+const REMAINDER_MILES = 51
+
 /**
  * Authorized PCS travel days by POV.
  * Source: JTR par. 050205 — one day for the first 400 miles; over 400, divide the
@@ -28,8 +32,20 @@ export const isPlanDate = (s: string) => /^(19|20)\d{2}-\d{2}-\d{2}$/.test(s) &&
 export function povTravelDays(miles: number): number {
   const m = Math.round(miles)
   if (m <= 0) return 0
-  if (m <= 400) return 1
-  return Math.floor(m / 350) + (m % 350 >= 51 ? 1 : 0)
+  if (m <= FIRST_DAY_MILES) return 1
+  return Math.floor(m / MILES_PER_DAY) + (m % MILES_PER_DAY >= REMAINDER_MILES ? 1 : 0)
+}
+
+/** The par. 050205 arithmetic behind povTravelDays, as lines to show the user. */
+export function povTravelSteps(miles: number): string[] {
+  const m = Math.round(miles)
+  if (m <= 0) return ['0 mi → no travel days']
+  if (m <= FIRST_DAY_MILES) return [`${m} mi ≤ ${FIRST_DAY_MILES} → 1 day`]
+  const rem = m % MILES_PER_DAY
+  return [
+    `${m} ÷ ${MILES_PER_DAY} = ${Math.floor(m / MILES_PER_DAY)} remainder ${rem}`,
+    rem >= REMAINDER_MILES ? `remainder ${rem} ≥ ${REMAINDER_MILES} → +1 day` : `remainder ${rem} < ${REMAINDER_MILES} → no extra day`,
+  ]
 }
 
 // ─── 2. TLE ──────────────────────────────────────────────────────────────────
@@ -179,8 +195,10 @@ const AR = 'AR 600-8-10'
 
 export function buildPlan(p: PlanInputs) {
   const enRoutePtdy = p.ptdyPlacement === 'after-signin' ? 0 : p.ptdyDays
-  const signOut = signOutDate(p.reportDate, p.leaveDays, p.travelDays, enRoutePtdy, p)
-  const leave = chargeableLeave(signOut, p.reportDate, p.travelDays, enRoutePtdy, p)
+  // A weekend report day is a non-duty day, so it is never charged (AR 600-8-10 para 11-1g).
+  const charging: DayCharging = { signOutDayWorked: p.signOutDayWorked, signInDayNotCharged: p.signInDayNotCharged || isWeekend(p.reportDate) }
+  const signOut = signOutDate(p.reportDate, p.leaveDays, p.travelDays, enRoutePtdy, charging)
+  const leave = chargeableLeave(signOut, p.reportDate, p.travelDays, enRoutePtdy, charging)
 
   // Order inside the DA 31 period, laid out forward from sign-out so no two blocks share a day:
   // [worked sign-out day] → [PTDY if after-departure] → leave → travel → [PTDY if before-report] → report.
@@ -188,7 +206,7 @@ export function buildPlan(p: PlanInputs) {
   // travel or PTDY runs through the report date.
   const firstFreeDay = p.signOutDayWorked ? addDays(signOut, 1) : signOut
   const leaveStart = addDays(firstFreeDay, p.ptdyPlacement === 'after-departure' ? p.ptdyDays : 0)
-  const leaveBeforeTravel = leave - (!p.signInDayNotCharged && leave > 0 ? 1 : 0)
+  const leaveBeforeTravel = leave - (!charging.signInDayNotCharged && leave > 0 ? 1 : 0)
   const travelStart = addDays(leaveStart, leaveBeforeTravel)
   const afterTravel = addDays(travelStart, p.travelDays)
   const arrival = afterTravel < p.reportDate ? afterTravel : p.reportDate
@@ -244,5 +262,23 @@ export function buildPlan(p: PlanInputs) {
   if (scra && scra.latestNotice < p.today && !p.noticeDate) warnings.push(`SCRA notice deadline (${scra.latestNotice}) has passed — the lease will run past ${vacate}. Talk to legal assistance.`)
   if (scra?.forward && scra.forward.termination > vacate) warnings.push(`With notice on ${p.noticeDate}, the lease ends ${scra.forward.termination}, after the vacate date ${vacate}.`)
 
-  return { signOut, leave, arrival, items, warnings, scra }
+  return { signOut, leave, enRoutePtdy, arrival, items, warnings, scra }
+}
+
+/** What the user typed or picked, for the warnings that apply even when no plan can be built. */
+export interface PlanSource {
+  reportDate: string
+  noticeDate: string
+  vacateDate: string
+  milesUnknown: boolean
+  stations: { name: string; unverified?: string }[]
+}
+
+export function inputWarnings(s: PlanSource): string[] {
+  const w: string[] = []
+  if (s.milesUnknown) w.push('No road distance for this pair (e.g. Hawaii) — enter official DTOD miles; travel days and the timeline are not computed.')
+  if (!isPlanDate(s.reportDate)) w.push('Enter a report date between 1900 and 2099 to build the timeline.')
+  if ([s.noticeDate, s.vacateDate].some((d) => d && !isPlanDate(d))) w.push('A notice or vacate date outside 1900–2099 is ignored.')
+  for (const i of s.stations) if (i.unverified) w.push(`${i.name}: data unverified (${i.unverified}).`)
+  return w
 }
