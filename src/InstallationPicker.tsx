@@ -29,7 +29,8 @@ export function InstallationPicker({ label, value, onChange }: { label: string; 
         value={query}
         placeholder="Name or former name, e.g. Fort Liberty"
         onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        // Unpicked text reverts, so the box never names a station other than the one computed.
+        onBlur={() => { setOpen(false); setQuery(value?.name ?? '') }}
         onChange={(e) => { setQuery(e.target.value); setOpen(true); setActive(0) }}
         onKeyDown={(e) => {
           if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setActive((a) => Math.min(a + 1, results.length - 1)) }

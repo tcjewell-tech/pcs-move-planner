@@ -71,6 +71,9 @@ export default function App() {
   const [outLead, setOutLead] = useState(String(DEFAULTS.outprocessingLeadDays))
   const [packLead, setPackLead] = useState(String(DEFAULTS.packoutLeadDays))
 
+  // A DTOD override belongs to one pair of stations, so changing either clears it.
+  const pickStation = (set: (i: Installation) => void) => (i: Installation) => { set(i); setDtod('') }
+
   const computedMiles = from && to ? drivingMiles(from.id, to.id) : null
   const miles = dtod !== '' && Number(dtod) > 0 ? Number(dtod) : computedMiles
   const travelDays = miles === null ? null : povTravelDays(miles) // null = unknown, never 0
@@ -133,8 +136,8 @@ export default function App() {
 
       <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
         <form className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 print:hidden" onSubmit={(e) => e.preventDefault()}>
-          <InstallationPicker label="Current duty station" value={from} onChange={setFrom} />
-          <InstallationPicker label="Gaining duty station" value={to} onChange={setTo} />
+          <InstallationPicker label="Current duty station" value={from} onChange={pickStation(setFrom)} />
+          <InstallationPicker label="Gaining duty station" value={to} onChange={pickStation(setTo)} />
           <Field label="Report date (from orders)"><input type="date" className="field" value={reportDate} onChange={(e) => setReportDate(e.target.value)} required /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Pay grade">
