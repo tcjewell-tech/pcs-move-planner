@@ -1,7 +1,8 @@
 /**
  * Builds src/data/installations.json from scripts/installations.seed.json.
  * - Name check: the seed's Wikipedia title must not redirect elsewhere, and every
- *   "Fort …"/"… AFB" alias must redirect to the same article (confirms former names).
+ *   "Fort …"/"… AFB" alias must redirect to the same article (confirms former names) or
+ *   have its own article within 30 km of the post (joint-base components).
  * - Coordinates: taken from the Wikipedia article's primary coordinates (not typed by hand).
  * - ZIP check: Census 2024 ZCTA gazetteer centroid must lie within 30 km of the post.
  * Anything that fails gets an `unverified` reason, which the UI shows. Review the report.
@@ -9,7 +10,8 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { UA, download, haversineKm, sleep, unzip } from './lib.ts'
 
-type Seed = { id: string; name: string; aliases: string[]; state: string; zip: string; wiki: string; coordsWiki?: string; zipCheck?: string }
+type Seed = { id: string; name: string; aliases: string[]; state: string; zip: string; wiki: string; coordsWiki?: string; zipCheck?: string; aliasWiki?: Record<string, string> }
+const MAX_KM = 30 // how far a ZIP centroid or a component's article may sit from the post
 const seed: Seed[] = JSON.parse(readFileSync('scripts/installations.seed.json', 'utf8'))
 const CACHE = 'scripts/.cache'
 mkdirSync(CACHE, { recursive: true })
@@ -27,10 +29,12 @@ for (const line of readFileSync(`${CACHE}/gaz/${gazFile}`, 'utf8').split('\n').s
 
 // Wikipedia: current titles, redirects (former names) and coordinates, 50 titles per request
 const isFormerName = (a: string) => /^Fort |AFB$/.test(a)
+// aliasWiki: the specific article, for a former name whose bare title is a disambiguation page
+const aliasTitle = (s: Seed, a: string) => s.aliasWiki?.[a] ?? a
 type Page = { title: string; missing?: string; coordinates?: { lat: number; lon: number }[] }
 const redirect = new Map<string, string>()
 const pages = new Map<string, Page>()
-const allTitles = [...new Set(seed.flatMap((s) => [s.wiki, ...(s.coordsWiki ? [s.coordsWiki] : []), ...s.aliases.filter(isFormerName)]))]
+const allTitles = [...new Set(seed.flatMap((s) => [s.wiki, ...(s.coordsWiki ? [s.coordsWiki] : []), ...s.aliases.filter(isFormerName).map((a) => aliasTitle(s, a))]))]
 for (let i = 0; i < allTitles.length; i += 50) {
   const titles = allTitles.slice(i, i + 50).join('|')
   const url = `https://en.wikipedia.org/w/api.php?action=query&format=json&redirects=1&prop=coordinates&colimit=max&titles=${encodeURIComponent(titles)}`
@@ -50,23 +54,28 @@ for (const s of seed) {
   const page = pages.get(resolve(s.wiki))
   if (!page || page.missing !== undefined) problems.push(`Wikipedia article "${s.wiki}" not found`)
   else if (resolve(s.wiki) !== s.wiki) problems.push(`"${s.wiki}" redirects to "${page.title}"`)
-  for (const a of s.aliases.filter(isFormerName)) {
-    const t = resolve(a)
-    if (t !== resolve(s.wiki)) report.push(`  note ${s.id}: alias "${a}" resolves to "${t}" (own article; OK if it is part of this base)`)
-  }
   // coordsWiki: a joint base whose own article has no coordinates uses its Army component's article
   const coord = (s.coordsWiki ? pages.get(resolve(s.coordsWiki)) : page)?.coordinates?.[0]
   if (!coord) problems.push('no coordinates on Wikipedia')
+  // A former name must redirect here, or have its own article located at this base (a joint-base component).
+  for (const a of s.aliases.filter(isFormerName)) {
+    const t = resolve(aliasTitle(s, a))
+    if (t === resolve(s.wiki)) continue
+    const at = pages.get(t)?.coordinates?.[0]
+    const km = at && coord ? haversineKm(coord.lat, coord.lon, at.lat, at.lon) : undefined
+    if (km !== undefined && km <= MAX_KM) report.push(`  note ${s.id}: alias "${a}" is its own article "${t}", ${km.toFixed(1)} km away`)
+    else problems.push(`former name "${a}" resolves to "${t}"${km === undefined ? ' (no coordinates to compare)' : `, ${km.toFixed(0)} km from the post`}`)
+  }
   const z = zcta.get(s.zip)
   let zipKm: number | undefined
   if (!z && s.zipCheck) report.push(`  note ${s.id}: ZIP ${s.zip} not a ZCTA; manual check: ${s.zipCheck}`)
   else if (!z) problems.push(`ZIP ${s.zip} is not a Census ZCTA (may be a PO-box/unique ZIP)`)
   else if (coord) {
     zipKm = haversineKm(coord.lat, coord.lon, z[0], z[1])
-    if (zipKm > 30) problems.push(`ZIP ${s.zip} centroid is ${zipKm.toFixed(0)} km from the post`)
+    if (zipKm > MAX_KM) problems.push(`ZIP ${s.zip} centroid is ${zipKm.toFixed(0)} km from the post`)
   }
   report.push(`${problems.length ? 'FAIL' : 'ok  '} ${s.id.padEnd(12)} zip ${s.zip} ${zipKm?.toFixed(1) ?? '-'} km  ${problems.join('; ')}`)
-  const { wiki: _w, coordsWiki: _c, zipCheck: _z, ...rest } = s
+  const { wiki: _w, coordsWiki: _c, zipCheck: _z, aliasWiki: _a, ...rest } = s
   out.push({
     ...rest,
     lat: coord ? Number(coord.lat.toFixed(4)) : null,

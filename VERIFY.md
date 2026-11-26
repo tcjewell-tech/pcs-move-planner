@@ -7,10 +7,11 @@ Status as of 2026-10-22. Items marked **OPEN** need a human check before you rel
 `npm run build:installations` re-runs every check below.
 
 - **All 46 entries passed the automated checks.**
-  - **Current name:** the Wikipedia article title doesn't redirect, and each former "Fort …" name redirects to it. Confirmed this way: Liberty→Bragg, Cavazos→Hood, Eisenhower→Gordon, Gregg-Adams→Lee, Johnson→Polk, Novosel→Rucker, Walker→A.P. Hill.
+  - **Current name:** the Wikipedia article title doesn't redirect, and each former "Fort …" or "… AFB" name redirects to it. Confirmed this way: Liberty→Bragg, Cavazos→Hood, Eisenhower→Gordon, Gregg-Adams→Lee, Johnson→Polk, Novosel→Rucker, Walker→A.P. Hill.
+  - **Joint-base component names** (Richardson, Elmendorf, Lewis, McChord, Myer, McNair, Dix, McGuire) have their own articles, so the check requires those to be within 30 km of the post. The farthest is McChord at 7.9 km (run of 2026-11-26).
   - **Coordinates:** taken from Wikipedia, not typed by hand.
   - **ZIP:** each ZIP's Census 2024 ZCTA centroid lies within 30 km of the post. The largest gap is Fort Hood at 22 km, which is a large post.
-- **Fort Benning:** "Fort Moore" is its own Wikipedia page (a disambiguation page), not a redirect. News coverage confirms the reversal: the Secretary of Defense restored "Fort Benning" in March 2025 with a new namesake, Cpl. Fred G. Benning. The Army announced the restorations for Bragg, Hood, Gordon, Lee, Polk, Rucker and A.P. Hill on 10 June 2025.
+- **Fort Benning:** "Fort Moore" is a disambiguation page, so the seed checks "Fort Moore (Georgia)" (`aliasWiki`), which redirects to Fort Benning. News coverage also confirms the reversal: the Secretary of Defense restored "Fort Benning" in March 2025 with a new namesake, Cpl. Fred G. Benning. The Army announced the restorations for Bragg, Hood, Gordon, Lee, Polk, Rucker and A.P. Hill on 10 June 2025.
 - **Three PO-box/unique ZIPs** have no Census ZCTA, so I checked them by hand against secondary sources (zip-codes.com, installation guides): Fort Greely 99731, Fort Hamilton 11252, Redstone Arsenal 35898. **OPEN:** confirm each maps to the expected MHA once BAH data is built.
 - **The Pentagon:** uses ZIP 22202 (Arlington, VA, where the building is). Its mailing ZIPs (DC 203xx) are unique ZIPs. **OPEN:** confirm 22202 maps to the Washington, DC metro MHA in the BAH file.
 - **Joint bases with several cantonments** use their Army or main cantonment: JBLM (Lewis Main, coordinates from the "Fort Lewis (Washington)" article), JBLE (Fort Eustis), JBSA (Fort Sam Houston), JBER (ZIP 99505, Fort Richardson side), JBMDL (ZIP 08640, Fort Dix side).

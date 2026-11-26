@@ -276,7 +276,7 @@ export default function App() {
           )}
 
           <footer className="text-xs text-slate-600 dark:text-slate-400">
-            Data: BAH — DoD Defense Travel Management Office rate file{bah ? ` (${bah.year})` : ''}; distances — {distances.source}, built {distances.built}; installations — verified {installations.length} posts (see VERIFY.md).
+            Data: BAH — DoD Defense Travel Management Office rate file{bah ? ` (${bah.year})` : ''}; distances — {distances.source}, built {distances.built}; installations — {installations.filter((i) => !i.unverified).length} of {installations.length} posts passed checks (see VERIFY.md).
             Rules: JTR pars. 050205, 050601; AR 600-8-10 (3 Jun 2020); 50 U.S.C. §3955.
           </footer>
         </div>
