@@ -151,7 +151,14 @@ export function scraLatestNotice(vacate: ISODate, dueDay: number): ISODate {
 
 export type Kind = 'regulatory limit' | 'planning default' | 'computed'
 
+export type TimelineId =
+  | 'book-hhg' | 'outprocessing' | 'packout' | 'last-duty-day' | 'sign-out' | 'report'
+  | 'travel' | 'leave' | 'ptdy' | 'tle-old' | 'tle-new'
+  | 'scra-deadline' | 'scra-notice' | 'scra-last-rent' | 'scra-end'
+
 export interface TimelineItem {
+  /** Names the event, whatever its date or wording. The .ics UID comes from it, so don't rename one. */
+  id: TimelineId
   date: ISODate
   end?: ISODate
   label: string
@@ -221,35 +228,35 @@ export function buildPlan(p: PlanInputs) {
   const vacate = p.vacateDate ?? signOut
 
   const items: TimelineItem[] = [
-    { date: p.today, label: 'Book household goods move in DPS (move.mil) as soon as orders are in hand', category: 'Orders', source: 'DPS / transportation office', kind: 'planning default' },
-    { date: addDays(signOut, -p.outprocessingLeadDays), label: 'Start out-processing (clearing)', category: 'Out-processing', source: 'Local installation clearing policy', kind: 'planning default' },
-    { date: addDays(signOut, -p.packoutLeadDays), label: 'Target pack-out date', category: 'Household goods', source: 'Transportation office scheduling', kind: 'planning default' },
-    { date: p.signOutDayWorked ? signOut : addDays(signOut, -1), label: 'Last duty day', category: 'Departure', source: `${AR} paras 2-9c, 11-1f`, kind: 'computed' },
-    { date: signOut, label: 'Sign out / depart (DA 31 "from" date)', category: 'Departure', source: `${AR} para 4-7b`, kind: 'computed' },
-    { date: p.reportDate, label: 'Report to gaining unit (DA 31 "to" date = report date in orders)', category: 'Arrival', source: `PCS orders; ${AR} para 4-7b`, kind: 'regulatory limit' },
+    { id: 'book-hhg', date: p.today, label: 'Book household goods move in DPS (move.mil) as soon as orders are in hand', category: 'Orders', source: 'DPS / transportation office', kind: 'planning default' },
+    { id: 'outprocessing', date: addDays(signOut, -p.outprocessingLeadDays), label: 'Start out-processing (clearing)', category: 'Out-processing', source: 'Local installation clearing policy', kind: 'planning default' },
+    { id: 'packout', date: addDays(signOut, -p.packoutLeadDays), label: 'Target pack-out date', category: 'Household goods', source: 'Transportation office scheduling', kind: 'planning default' },
+    { id: 'last-duty-day', date: p.signOutDayWorked ? signOut : addDays(signOut, -1), label: 'Last duty day', category: 'Departure', source: `${AR} paras 2-9c, 11-1f`, kind: 'computed' },
+    { id: 'sign-out', date: signOut, label: 'Sign out / depart (DA 31 "from" date)', category: 'Departure', source: `${AR} para 4-7b`, kind: 'computed' },
+    { id: 'report', date: p.reportDate, label: 'Report to gaining unit (DA 31 "to" date = report date in orders)', category: 'Arrival', source: `PCS orders; ${AR} para 4-7b`, kind: 'regulatory limit' },
   ]
   if (p.travelDays > 0)
-    items.push({ date: travelStart, end: addDays(afterTravel, -1), label: `Authorized travel: ${p.travelDays} day(s)`, category: 'En route', source: 'JTR par. 050205', kind: 'regulatory limit' })
+    items.push({ id: 'travel', date: travelStart, end: addDays(afterTravel, -1), label: `Authorized travel: ${p.travelDays} day(s)`, category: 'En route', source: 'JTR par. 050205', kind: 'regulatory limit' })
   if (leaveBeforeTravel > 0)
-    items.push({ date: leaveStart, end: addDays(travelStart, -1), label: `En-route leave (${leave} chargeable day(s) incl. sign-out/sign-in day charging)`, category: 'En route', source: `${AR} paras 4-7, 11-1`, kind: 'planning default' })
+    items.push({ id: 'leave', date: leaveStart, end: addDays(travelStart, -1), label: `En-route leave (${leave} chargeable day(s) incl. sign-out/sign-in day charging)`, category: 'En route', source: `${AR} paras 4-7, 11-1`, kind: 'planning default' })
   if (p.ptdyDays > 0)
-    items.push({ date: ptdyStart, end: addDays(ptdyStart, p.ptdyDays - 1), label: `House-hunting administrative absence (PTDY), ${p.ptdyDays} day(s)${ptdyNote}`, category: 'Housing', source: `${AR} para 5-12c(9) (max 10, commander approval)`, kind: 'regulatory limit' })
+    items.push({ id: 'ptdy', date: ptdyStart, end: addDays(ptdyStart, p.ptdyDays - 1), label: `House-hunting administrative absence (PTDY), ${p.ptdyDays} day(s)${ptdyNote}`, category: 'Housing', source: `${AR} para 5-12c(9) (max 10, commander approval)`, kind: 'regulatory limit' })
   if (!p.oconus) {
     if (p.tleOld > 0)
-      items.push({ date: addDays(signOut, -p.tleOld), end: addDays(signOut, -1), label: `TLE at old PDS (${p.tleOld} day(s))`, category: 'Housing', source: 'JTR par. 050601 (21-day CONUS total)', kind: 'planning default' })
+      items.push({ id: 'tle-old', date: addDays(signOut, -p.tleOld), end: addDays(signOut, -1), label: `TLE at old PDS (${p.tleOld} day(s))`, category: 'Housing', source: 'JTR par. 050601 (21-day CONUS total)', kind: 'planning default' })
     if (p.tleNew > 0)
-      items.push({ date: arrival, end: addDays(arrival, p.tleNew - 1), label: `TLE at new PDS (${p.tleNew} day(s))`, category: 'Housing', source: 'JTR par. 050601 (21-day CONUS total)', kind: 'planning default' })
+      items.push({ id: 'tle-new', date: arrival, end: addDays(arrival, p.tleNew - 1), label: `TLE at new PDS (${p.tleNew} day(s))`, category: 'Housing', source: 'JTR par. 050601 (21-day CONUS total)', kind: 'planning default' })
   }
 
   let scra: { latestNotice: ISODate; vacate: ISODate; forward?: ReturnType<typeof scraTermination> } | null = null
   if (p.rentDueDay) {
     scra = { latestNotice: scraLatestNotice(vacate, p.rentDueDay), vacate }
-    items.push({ date: scra.latestNotice, label: `Deliver SCRA lease-termination notice + copy of orders by this date (lease ends by ${vacate})`, category: 'Housing', source: '50 U.S.C. §3955(c), (d)(1)', kind: 'regulatory limit' })
+    items.push({ id: 'scra-deadline', date: scra.latestNotice, label: `Deliver SCRA lease-termination notice + copy of orders by this date (lease ends by ${vacate})`, category: 'Housing', source: '50 U.S.C. §3955(c), (d)(1)', kind: 'regulatory limit' })
     if (p.noticeDate) {
       scra.forward = scraTermination(p.noticeDate, p.rentDueDay)
-      items.push({ date: p.noticeDate, label: 'SCRA notice delivered', category: 'Housing', source: '50 U.S.C. §3955(c)', kind: 'computed' })
-      items.push({ date: scra.forward.lastRentDue, label: 'Last rent payment due (prorated to termination)', category: 'Housing', source: '50 U.S.C. §3955(d)(1), (e)', kind: 'computed' })
-      items.push({ date: scra.forward.termination, label: 'Lease termination effective', category: 'Housing', source: '50 U.S.C. §3955(d)(1)', kind: 'computed' })
+      items.push({ id: 'scra-notice', date: p.noticeDate, label: 'SCRA notice delivered', category: 'Housing', source: '50 U.S.C. §3955(c)', kind: 'computed' })
+      items.push({ id: 'scra-last-rent', date: scra.forward.lastRentDue, label: 'Last rent payment due (prorated to termination)', category: 'Housing', source: '50 U.S.C. §3955(d)(1), (e)', kind: 'computed' })
+      items.push({ id: 'scra-end', date: scra.forward.termination, label: 'Lease termination effective', category: 'Housing', source: '50 U.S.C. §3955(d)(1)', kind: 'computed' })
     }
   }
   items.sort((a, b) => a.date.localeCompare(b.date))

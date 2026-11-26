@@ -262,8 +262,8 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {plan.items.map((it, n) => (
-                      <tr key={n} className="border-t border-slate-200 align-top dark:border-slate-700">
+                    {plan.items.map((it) => (
+                      <tr key={it.id} className="border-t border-slate-200 align-top dark:border-slate-700">
                         <td className="whitespace-nowrap py-1.5 pr-2 font-mono text-xs">{it.date}{it.end && it.end !== it.date && <> –<br />{it.end}</>}</td>
                         <td className="whitespace-nowrap pr-2 text-xs">{(() => { const d = daysBetween(today, it.date); return d === 0 ? 'today' : d > 0 ? `in ${d} d` : `${-d} d ago` })()}</td>
                         <td className="pr-2 text-xs">{it.category}</td>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULTS, addDays, buildPlan, chargeableLeave, daysBetween, inputWarnings, isPlanDate, nextDueAfter, povTravelDays,
-  povTravelSteps, scraLatestNotice, scraTermination, signOutDate, tleCheck, type PlanInputs,
+  povTravelSteps, scraLatestNotice, scraTermination, signOutDate, tleCheck, type PlanInputs, type TimelineId,
 } from './rules'
 
 describe('isPlanDate', () => {
@@ -131,10 +131,10 @@ describe('buildPlan', () => {
     // absent days = 10 + 3 + 5 = 18 → sign out 18 days counting the report day
     expect(daysBetween(r.signOut, '2027-01-15') + 1).toBe(18)
     expect(r.leave).toBe(10)
-    const travel = r.items.find((i) => i.label.startsWith('Authorized travel'))!
+    const travel = r.items.find((i) => i.id === 'travel')!
     expect(travel.date).toBe('2027-01-07')
     expect(travel.end).toBe('2027-01-09')
-    const ptdy = r.items.find((i) => i.label.startsWith('House-hunting'))!
+    const ptdy = r.items.find((i) => i.id === 'ptdy')!
     expect([ptdy.date, ptdy.end]).toEqual(['2027-01-10', '2027-01-14'])
   })
   it('PTDY after sign-in does not shorten the en-route period', () => {
@@ -143,8 +143,8 @@ describe('buildPlan', () => {
   })
   it('defaults pack-out to 7 and out-processing to 60 days before departure', () => {
     const r = buildPlan(base)
-    expect(r.items.find((i) => i.label === 'Target pack-out date')!.date).toBe(addDays(r.signOut, -7))
-    expect(r.items.find((i) => i.label.startsWith('Start out-processing'))!.date).toBe(addDays(r.signOut, -60))
+    expect(r.items.find((i) => i.id === 'packout')!.date).toBe(addDays(r.signOut, -7))
+    expect(r.items.find((i) => i.id === 'outprocessing')!.date).toBe(addDays(r.signOut, -60))
   })
   it('SCRA deadline defaults to vacating on the departure date', () => {
     const r = buildPlan(base)
@@ -164,7 +164,7 @@ describe('buildPlan', () => {
   })
   it('omits the travel item when there are no travel days, so no item ends before it starts', () => {
     const r = buildPlan({ ...base, travelDays: 0 })
-    expect(r.items.some((i) => i.label.startsWith('Authorized travel'))).toBe(false)
+    expect(r.items.some((i) => i.id === 'travel')).toBe(false)
     for (const i of r.items) expect((i.end ?? i.date) >= i.date, i.label).toBe(true)
   })
   it('places every day of the DA 31 period exactly once, charging exactly the reported leave', () => {
@@ -178,11 +178,11 @@ describe('buildPlan', () => {
                 const inputs = { ...base, ptdyPlacement, signOutDayWorked, signInDayNotCharged, leaveDays, travelDays, ptdyDays }
                 const r = buildPlan(inputs)
                 const name = JSON.stringify([ptdyPlacement, signOutDayWorked, signInDayNotCharged, leaveDays, travelDays, ptdyDays])
-                const days = (prefix: string) => r.items
-                  .filter((i) => i.label.startsWith(prefix) && i.date <= base.reportDate)
+                const days = (id: TimelineId) => r.items
+                  .filter((i) => i.id === id && i.date <= base.reportDate)
                   .flatMap((i) => Array.from({ length: daysBetween(i.date, i.end!) + 1 }, (_, n) => addDays(i.date, n)))
-                const leave = days('En-route leave')
-                const used = [...leave, ...days('Authorized travel'), ...days('House-hunting')]
+                const leave = days('leave')
+                const used = [...leave, ...days('travel'), ...days('ptdy')]
                 if (signOutDayWorked) used.push(r.signOut)
                 expect(new Set(used).size, `${name}: day used twice`).toBe(used.length)
                 for (const d of used) expect(d >= r.signOut && d <= base.reportDate, `${name}: ${d} outside the period`).toBe(true)
@@ -194,7 +194,7 @@ describe('buildPlan', () => {
   })
   it('starts house hunting the day after a worked sign-out day', () => {
     const r = buildPlan({ ...base, ptdyDays: 5, ptdyPlacement: 'after-departure', signOutDayWorked: true })
-    const ptdy = r.items.find((i) => i.label.startsWith('House-hunting'))!
+    const ptdy = r.items.find((i) => i.id === 'ptdy')!
     expect(ptdy.date).toBe(addDays(r.signOut, 1))
     expect(ptdy.label).toMatch(/confirm with S1/)
   })
@@ -203,7 +203,14 @@ describe('buildPlan', () => {
     expect(r.signOut).toBe(buildPlan({ ...base, reportDate: '2027-01-16', signInDayNotCharged: true }).signOut)
     expect(daysBetween(r.signOut, '2027-01-16') + 1).toBe(14) // 10 leave + 3 travel + the uncharged report day
   })
+  it('gives each event one ID that survives a change of dates', () => {
+    const full: PlanInputs = { ...base, ptdyDays: 5, noticeDate: '2026-11-15' }
+    const ids = (p: PlanInputs) => buildPlan(p).items.map((i) => i.id).sort()
+    expect(new Set(ids(full)).size).toBe(15) // every kind of item, none repeated
+    expect(ids(full)).toHaveLength(15)
+    expect(ids({ ...full, today: '2026-11-01', reportDate: '2027-03-01', ptdyPlacement: 'after-departure' })).toEqual(ids(full))
+  })
   it('omits TLE windows for OCONUS', () => {
-    expect(buildPlan({ ...base, oconus: true }).items.some((i) => i.label.startsWith('TLE'))).toBe(false)
+    expect(buildPlan({ ...base, oconus: true }).items.some((i) => i.id === 'tle-old' || i.id === 'tle-new')).toBe(false)
   })
 })

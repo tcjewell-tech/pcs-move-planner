@@ -27,9 +27,9 @@ The data scripts run with `tsx` and are not in the TypeScript project (`tsconfig
 - `scripts/lib.ts` provides the shared User-Agent (Wikimedia returns 429 without a URL in the UA), `unzip` (bsdtar, falling back to unzip), and `haversineKm`.
 
 **Runtime (`src/lib/`).**
-- `rules.ts` holds all regulatory logic as pure functions on ISO `YYYY-MM-DD` strings using whole-day UTC math. Each rule's doc comment cites its source: JTR 050205/050601, AR 600-8-10 (3 Jun 2020), and 50 U.S.C. §3955. `buildPlan()` combines the rules into the back-planned timeline and the warnings. Every `TimelineItem` has a `kind` of `'regulatory limit' | 'planning default' | 'computed'`, which the UI shows as a badge. Keep that labeling on anything you add.
+- `rules.ts` holds all regulatory logic as pure functions on ISO `YYYY-MM-DD` strings using whole-day UTC math. Each rule's doc comment cites its source: JTR 050205/050601, AR 600-8-10 (3 Jun 2020), and 50 U.S.C. §3955. `buildPlan()` combines the rules into the back-planned timeline and the warnings. Every `TimelineItem` has a `kind` of `'regulatory limit' | 'planning default' | 'computed'`, which the UI shows as a badge. Keep that labeling on anything you add. Each item also has a fixed `id` (`TimelineId`); match on it, not on label text, and don't rename one.
 - `data.ts` loads the JSON and does lookups: installation → ZIP → MHA → rate (`bahFor`). It returns `null` rather than estimate. BAH is loaded through `import.meta.glob('../data/bah/*.json')` so the app still builds without BAH data; a literal file path there doesn't work.
-- `ics.ts` exports all-day VEVENTs with an exclusive DTEND and RFC 5545 line folding.
+- `ics.ts` exports all-day VEVENTs with an exclusive DTEND and RFC 5545 line folding. The UID comes from the item's `id`, so a re-exported event keeps its UID when dates move.
 - `App.tsx` holds all form state and calls `buildPlan()` on each render. `InstallationPicker.tsx` is an ARIA combobox that searches names and aliases.
 
 **Key domain conventions** (details in `README.md`, open questions in `VERIFY.md`):

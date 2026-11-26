@@ -55,8 +55,8 @@ describe('bahStaleWarning', () => {
 describe('toIcs', () => {
   const ics = toIcs(
     [
-      { date: '2027-01-07', end: '2027-01-09', label: 'Travel; 3 days, by POV', category: 'En route', source: 'JTR par. 050205', kind: 'regulatory limit' },
-      { date: '2027-01-15', label: 'Report', category: 'Arrival', source: 'orders', kind: 'computed' },
+      { id: 'travel', date: '2027-01-07', end: '2027-01-09', label: 'Travel; 3 days, by POV', category: 'En route', source: 'JTR par. 050205', kind: 'regulatory limit' },
+      { id: 'report', date: '2027-01-15', label: 'Report', category: 'Arrival', source: 'orders', kind: 'computed' },
     ],
     new Date('2026-10-22T12:00:00Z'),
   )
@@ -66,6 +66,9 @@ describe('toIcs', () => {
     expect(ics).toContain('SUMMARY:Travel\\; 3 days\\, by POV')
     expect(ics).toContain('DTSTAMP:20261022T120000Z')
     expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(2)
+  })
+  it('takes the UID from the item ID, not its date or position', () => {
+    expect(ics.match(/UID:.*/g)).toEqual(['UID:travel@pcs-move-planner', 'UID:report@pcs-move-planner'])
   })
   it('folds lines to 75 octets', () => {
     for (const line of ics.split('\r\n')) expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75)

@@ -21,10 +21,12 @@ export function toIcs(items: TimelineItem[], now = new Date()): string {
   const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '')
   const d = (s: string) => s.replace(/-/g, '')
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//PCS Move Planner//EN', 'CALSCALE:GREGORIAN']
-  items.forEach((it, n) => {
+  items.forEach((it) => {
     lines.push(
       'BEGIN:VEVENT',
-      `UID:${d(it.date)}-${n}@pcs-move-planner`,
+      // Same event, same UID, so a re-import can update it instead of adding a copy.
+      // shortcut: one UID set per calendar, so a later PCS replaces these events; add a plan ID if both must be kept.
+      `UID:${it.id}@pcs-move-planner`,
       `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${d(it.date)}`,
       `DTEND;VALUE=DATE:${d(addDays(it.end ?? it.date, 1))}`,
