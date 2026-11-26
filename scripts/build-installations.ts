@@ -32,6 +32,7 @@ const isFormerName = (a: string) => /^Fort |AFB$/.test(a)
 // aliasWiki: the specific article, for a former name whose bare title is a disambiguation page
 const aliasTitle = (s: Seed, a: string) => s.aliasWiki?.[a] ?? a
 type Page = { title: string; missing?: string; coordinates?: { lat: number; lon: number }[] }
+type Query = { normalized?: { from: string; to: string }[]; redirects?: { from: string; to: string }[]; pages: Record<string, Page> }
 const redirect = new Map<string, string>()
 const pages = new Map<string, Page>()
 const allTitles = [...new Set(seed.flatMap((s) => [s.wiki, ...(s.coordsWiki ? [s.coordsWiki] : []), ...s.aliases.filter(isFormerName).map((a) => aliasTitle(s, a))]))]
@@ -40,9 +41,9 @@ for (let i = 0; i < allTitles.length; i += 50) {
   const url = `https://en.wikipedia.org/w/api.php?action=query&format=json&redirects=1&prop=coordinates&colimit=max&titles=${encodeURIComponent(titles)}`
   const res = await fetch(url, { headers: { 'User-Agent': UA } })
   if (!res.ok) throw new Error(`wikipedia ${res.status}`)
-  const q = (await res.json()).query
+  const { query: q } = (await res.json()) as { query: Query }
   for (const n of [...(q.normalized ?? []), ...(q.redirects ?? [])]) redirect.set(n.from, n.to)
-  for (const p of Object.values(q.pages) as Page[]) pages.set(p.title, p)
+  for (const p of Object.values(q.pages)) pages.set(p.title, p)
   await sleep(1000)
 }
 const resolve = (t: string): string => (redirect.has(t) ? resolve(redirect.get(t)!) : t)

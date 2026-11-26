@@ -16,7 +16,7 @@ npm run lint                   # oxlint
 npm run build:data             # installations → bah → distances (each also runnable alone: build:installations, build:bah, build:distances)
 ```
 
-The data scripts run with `tsx` and are not in the TypeScript project (`tsconfig.app.json` includes only `src/`).
+The data scripts run with `tsx`; `npx tsc -b` typechecks them through `tsconfig.node.json`. `.github/workflows/ci.yml` runs lint, tests and the build on every push. CI never rebuilds data.
 
 ## Architecture
 

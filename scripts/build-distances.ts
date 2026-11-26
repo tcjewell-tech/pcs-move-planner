@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { UA, sleep } from './lib.ts'
 
 type Inst = { id: string; lat: number; lon: number }
+type Route = { code: string; routes?: { distance: number }[] }
 const insts: Inst[] = JSON.parse(readFileSync('src/data/installations.json', 'utf8'))
 const CACHE = 'scripts/.cache/osrm'
 mkdirSync(CACHE, { recursive: true })
@@ -26,11 +27,11 @@ for (const [a, b] of pairs) {
   const file = `${CACHE}/${key(a)}__${key(b)}.json`
   if (!existsSync(file)) {
     const url = `https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=false`
-    let body: { code: string; routes?: { distance: number }[] } | undefined
+    let body: Route | undefined
     for (let attempt = 0; attempt < 5 && !body; attempt++) {
       const res = await fetch(url, { headers: { 'User-Agent': UA } })
       await sleep(1000)
-      const json = await res.json().catch(() => undefined)
+      const json = (await res.json().catch(() => undefined)) as Route | undefined
       // NoRoute is a real answer (no road between the points); anything else non-Ok is retried.
       if (json?.code === 'Ok' || json?.code === 'NoRoute') body = json
       else await sleep(5000 * (attempt + 1))
