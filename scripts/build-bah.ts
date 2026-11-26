@@ -7,7 +7,7 @@
  * The 2003 format PDF stops at O7; the 2026 files carry 27 rates (O8–O10 appended).
  * Fails loudly on any layout it does not recognise. Never estimates a rate.
  */
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { unzip } from './lib.ts'
 
 const RAW = 'data-raw'
@@ -29,6 +29,7 @@ let dir = RAW
 if (zips.length) {
   if (zips.length > 1) fail(`more than one ZIP in ${RAW}/ (${zips.join(', ')}); keep only the current year`)
   dir = OUT_DIR
+  rmSync(dir, { recursive: true, force: true }) // last year's files would match the patterns below
   unzip(`${RAW}/${zips[0]}`, dir)
 }
 const files = readdirSync(dir)
