@@ -37,6 +37,8 @@ Status as of 2026-10-22. Items marked **OPEN** need a human check before you rel
   - House-hunting eligibility (not shown as a rule): the soldier must be moving the household and must not be immediately occupying Government quarters.
   - The para 4-7h examples are internally inconsistent. Example (3) and the 70-day case in example (1) count the DA 31 period from the departure day through the report date, both days included, and the app follows that. Two figures don't fit: "2 Oct to 1 Dec" is called 60 days but is 61 counting both ends, and "14 Oct to 1 Dec" is called 50 days but is 49.
   - Federal holidays are not detected for the sign-in-day rule. Check the box if you report on a holiday.
+  - **OPEN (planning assumption):** with house hunting "Right after departure" and a worked sign-out day, the app starts house hunting the next day, so one day isn't counted as both. The timeline item says "confirm with S1".
+  - **OPEN (planning assumption):** with no leave to charge on the report day (0 leave days), the timeline runs travel or house hunting through the report date.
 - **50 U.S.C. §3955:** text read from law.cornell.edu. Termination takes effect 30 days after the first rent due date *after* notice is delivered. Rent through termination is prorated (§3955(e)).
 
 ## Test scenarios

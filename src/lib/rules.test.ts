@@ -146,6 +146,37 @@ describe('buildPlan', () => {
     expect(r.items.some((i) => i.label.startsWith('Authorized travel'))).toBe(false)
     for (const i of r.items) expect((i.end ?? i.date) >= i.date, i.label).toBe(true)
   })
+  it('places every day of the DA 31 period exactly once, charging exactly the reported leave', () => {
+    const flags = [false, true]
+    for (const ptdyPlacement of ['before-report', 'after-departure', 'after-signin'] as const)
+      for (const signOutDayWorked of flags)
+        for (const signInDayNotCharged of flags)
+          for (const leaveDays of [0, 1, 2, 10])
+            for (const travelDays of [0, 1, 4])
+              for (const ptdyDays of [0, 1, 5]) {
+                const inputs = { ...base, ptdyPlacement, signOutDayWorked, signInDayNotCharged, leaveDays, travelDays, ptdyDays }
+                const r = buildPlan(inputs)
+                const name = JSON.stringify([ptdyPlacement, signOutDayWorked, signInDayNotCharged, leaveDays, travelDays, ptdyDays])
+                const days = (prefix: string) => r.items
+                  .filter((i) => i.label.startsWith(prefix) && i.date <= base.reportDate)
+                  .flatMap((i) => Array.from({ length: daysBetween(i.date, i.end!) + 1 }, (_, n) => addDays(i.date, n)))
+                const leave = days('En-route leave')
+                const used = [...leave, ...days('Authorized travel'), ...days('House-hunting')]
+                if (signOutDayWorked) used.push(r.signOut)
+                expect(new Set(used).size, `${name}: day used twice`).toBe(used.length)
+                for (const d of used) expect(d >= r.signOut && d <= base.reportDate, `${name}: ${d} outside the period`).toBe(true)
+                // The report day is its own day unless travel, house hunting or a worked sign-out already covers it.
+                const reportFree = !used.includes(base.reportDate)
+                expect(used.length + (reportFree ? 1 : 0), `${name}: gap`).toBe(daysBetween(r.signOut, base.reportDate) + 1)
+                expect(leave.length + (reportFree && !signInDayNotCharged ? 1 : 0), `${name}: leave days`).toBe(r.leave)
+              }
+  })
+  it('starts house hunting the day after a worked sign-out day', () => {
+    const r = buildPlan({ ...base, ptdyDays: 5, ptdyPlacement: 'after-departure', signOutDayWorked: true })
+    const ptdy = r.items.find((i) => i.label.startsWith('House-hunting'))!
+    expect(ptdy.date).toBe(addDays(r.signOut, 1))
+    expect(ptdy.label).toMatch(/confirm with S1/)
+  })
   it('omits TLE windows for OCONUS', () => {
     expect(buildPlan({ ...base, oconus: true }).items.some((i) => i.label.startsWith('TLE'))).toBe(false)
   })

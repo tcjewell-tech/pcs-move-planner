@@ -182,15 +182,24 @@ export function buildPlan(p: PlanInputs) {
   const signOut = signOutDate(p.reportDate, p.leaveDays, p.travelDays, enRoutePtdy, p)
   const leave = chargeableLeave(signOut, p.reportDate, p.travelDays, enRoutePtdy, p)
 
-  // Order inside the DA 31 period: sign-out → [PTDY if after-departure] → leave → travel → [PTDY if before-report] → report.
-  const ptdyBefore = p.ptdyPlacement === 'before-report' ? p.ptdyDays : 0
-  const travelStart = addDays(p.reportDate, -(ptdyBefore + p.travelDays))
-  const arrival = addDays(travelStart, p.travelDays)
+  // Order inside the DA 31 period, laid out forward from sign-out so no two blocks share a day:
+  // [worked sign-out day] → [PTDY if after-departure] → leave → travel → [PTDY if before-report] → report.
+  // A charged report day is itself one of the leave days. With no leave to charge there,
+  // travel or PTDY runs through the report date.
+  const firstFreeDay = p.signOutDayWorked ? addDays(signOut, 1) : signOut
+  const leaveStart = addDays(firstFreeDay, p.ptdyPlacement === 'after-departure' ? p.ptdyDays : 0)
+  const leaveBeforeTravel = leave - (!p.signInDayNotCharged && leave > 0 ? 1 : 0)
+  const travelStart = addDays(leaveStart, leaveBeforeTravel)
+  const afterTravel = addDays(travelStart, p.travelDays)
+  const arrival = afterTravel < p.reportDate ? afterTravel : p.reportDate
   const ptdyStart =
-    p.ptdyPlacement === 'before-report' ? addDays(p.reportDate, -p.ptdyDays)
-    : p.ptdyPlacement === 'after-departure' ? signOut
+    p.ptdyPlacement === 'before-report' ? afterTravel
+    : p.ptdyPlacement === 'after-departure' ? firstFreeDay
     : addDays(p.reportDate, 1)
-  const leaveStart = p.ptdyPlacement === 'after-departure' ? addDays(signOut, p.ptdyDays) : signOut
+  const ptdyNote =
+    p.ptdyPlacement === 'after-signin' ? ' — after in-processing, gaining commander'
+    : p.ptdyPlacement === 'after-departure' && p.signOutDayWorked ? ' — starts the day after your worked sign-out day (confirm with S1)'
+    : ''
   const vacate = p.vacateDate ?? signOut
 
   const items: TimelineItem[] = [
@@ -202,12 +211,11 @@ export function buildPlan(p: PlanInputs) {
     { date: p.reportDate, label: 'Report to gaining unit (DA 31 "to" date = report date in orders)', category: 'Arrival', source: `PCS orders; ${AR} para 4-7b`, kind: 'regulatory limit' },
   ]
   if (p.travelDays > 0)
-    items.push({ date: travelStart, end: addDays(arrival, -1), label: `Authorized travel: ${p.travelDays} day(s)`, category: 'En route', source: 'JTR par. 050205', kind: 'regulatory limit' })
-  const leaveEnd = addDays(travelStart, -1)
-  if (leaveEnd >= leaveStart)
-    items.push({ date: leaveStart, end: leaveEnd, label: `En-route leave (${leave} chargeable day(s) incl. sign-out/sign-in day charging)`, category: 'En route', source: `${AR} paras 4-7, 11-1`, kind: 'planning default' })
+    items.push({ date: travelStart, end: addDays(afterTravel, -1), label: `Authorized travel: ${p.travelDays} day(s)`, category: 'En route', source: 'JTR par. 050205', kind: 'regulatory limit' })
+  if (leaveBeforeTravel > 0)
+    items.push({ date: leaveStart, end: addDays(travelStart, -1), label: `En-route leave (${leave} chargeable day(s) incl. sign-out/sign-in day charging)`, category: 'En route', source: `${AR} paras 4-7, 11-1`, kind: 'planning default' })
   if (p.ptdyDays > 0)
-    items.push({ date: ptdyStart, end: addDays(ptdyStart, p.ptdyDays - 1), label: `House-hunting administrative absence (PTDY), ${p.ptdyDays} day(s)${p.ptdyPlacement === 'after-signin' ? ' — after in-processing, gaining commander' : ''}`, category: 'Housing', source: `${AR} para 5-12c(9) (max 10, commander approval)`, kind: 'regulatory limit' })
+    items.push({ date: ptdyStart, end: addDays(ptdyStart, p.ptdyDays - 1), label: `House-hunting administrative absence (PTDY), ${p.ptdyDays} day(s)${ptdyNote}`, category: 'Housing', source: `${AR} para 5-12c(9) (max 10, commander approval)`, kind: 'regulatory limit' })
   if (!p.oconus) {
     if (p.tleOld > 0)
       items.push({ date: addDays(signOut, -p.tleOld), end: addDays(signOut, -1), label: `TLE at old PDS (${p.tleOld} day(s))`, category: 'Housing', source: 'JTR par. 050601 (21-day CONUS total)', kind: 'planning default' })
