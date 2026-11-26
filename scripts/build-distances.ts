@@ -6,7 +6,7 @@
  * (e.g. Hawaii ↔ mainland) are stored as null and the UI asks for DTOD miles.
  * These are planning distances; DTOD is the authoritative source for entitlements.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { UA, sleep } from './lib.ts'
 
 type Inst = { id: string; lat: number; lon: number }
@@ -19,8 +19,11 @@ for (let i = 0; i < insts.length; i++) for (let j = i + 1; j < insts.length; j++
 
 const out: Record<string, number | null> = {}
 let fetched = 0
+let oldest = Date.now()
+// Coordinates are part of the cache name, so a corrected post is fetched again.
+const key = (i: Inst) => `${i.id}@${i.lat},${i.lon}`
 for (const [a, b] of pairs) {
-  const file = `${CACHE}/${a.id}__${b.id}.json`
+  const file = `${CACHE}/${key(a)}__${key(b)}.json`
   if (!existsSync(file)) {
     const url = `https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=false`
     let body: { code: string; routes?: { distance: number }[] } | undefined
@@ -36,12 +39,15 @@ for (const [a, b] of pairs) {
     writeFileSync(file, JSON.stringify(body))
     if (++fetched % 50 === 0) console.log(`fetched ${fetched}…`)
   }
+  oldest = Math.min(oldest, statSync(file).mtimeMs)
   const body = JSON.parse(readFileSync(file, 'utf8'))
   out[`${a.id}|${b.id}`] = body.code === 'Ok' ? Math.round(body.routes[0].distance / 1609.344) : null
 }
 
 writeFileSync(
   'src/data/distances.json',
-  JSON.stringify({ source: 'OSRM router.project-osrm.org (OpenStreetMap), driving', built: new Date().toISOString().slice(0, 10), miles: out }) + '\n',
+  // `built` is the age of the oldest response used, not the day of this run.
+  // shortcut: read from cache file times; store the date in each entry if the cache is ever copied without them.
+  JSON.stringify({ source: 'OSRM router.project-osrm.org (OpenStreetMap), driving', built: new Date(oldest).toISOString().slice(0, 10), miles: out }) + '\n',
 )
 console.log(`wrote ${pairs.length} pairs (${fetched} fetched, ${Object.values(out).filter((v) => v === null).length} without a road route)`)

@@ -36,7 +36,7 @@ npm run build:data
 |---|---|---|
 | `build:installations` | `src/data/installations.json` | `scripts/installations.seed.json`. Coordinates and current names come from the Wikipedia API (former names must redirect to the current article). ZIPs are checked against the Census 2024 ZCTA gazetteer. |
 | `build:bah` | `src/data/bah/bah.json` | The DoD BAH rate file in `data-raw/` |
-| `build:distances` | `src/data/distances.json` | Public OSRM server (router.project-osrm.org), 1 request/s. Responses are cached in `scripts/.cache/osrm/`, so a rerun only fetches new pairs. A first run takes about 35 minutes. |
+| `build:distances` | `src/data/distances.json` | Public OSRM server (router.project-osrm.org), 1 request/s. Responses are cached in `scripts/.cache/osrm/`, so a rerun only fetches new pairs and pairs whose coordinates changed. The `built` date is that of the oldest response used. A first run takes about 35 minutes. |
 
 DoD sometimes reissues rates partway through the year (for example, the Abilene TX270 increase of May 2026). When it does, download the file again and rerun `npm run build:bah`. Keep only one ZIP in `data-raw/`.
 
