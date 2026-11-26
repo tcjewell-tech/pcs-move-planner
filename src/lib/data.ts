@@ -50,6 +50,13 @@ export function drivingMiles(a: string, b: string): number | null {
   return distances.miles[`${a}|${b}`] ?? distances.miles[`${b}|${a}`] ?? null
 }
 
+/** Warning text when the report date is in a later year than the loaded rates; else null. */
+export function bahStaleWarning(reportDate: string | null, data: Bah | null = bah) {
+  const year = Number(reportDate?.slice(0, 4))
+  if (!data || !(year > data.year)) return null
+  return `BAH shown is the ${data.year} rate, but your report date is in ${year}. Rates change 1 January — check the official DoD BAH lookup.`
+}
+
 /** installation → ZIP → MHA → rates. Null when the ZIP has no MHA (never estimated). */
 export function bahFor(i: Installation, data: Bah | null = bah) {
   const mha = data?.zipToMha[i.zip]

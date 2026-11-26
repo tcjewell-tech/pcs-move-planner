@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bahFor, drivingMiles, installations, searchInstallations, type Bah } from './data'
+import { bahFor, bahStaleWarning, drivingMiles, installations, searchInstallations, type Bah } from './data'
 import { toIcs } from './ics'
 
 describe('installation search', () => {
@@ -37,6 +37,18 @@ describe('bahFor', () => {
   it('returns null (never estimates) when the ZIP has no MHA', () => {
     expect(bahFor(installations.find((i) => i.id === 'hood')!, data)).toBeNull()
     expect(bahFor(installations[0], null)).toBeNull()
+  })
+})
+
+describe('bahStaleWarning', () => {
+  const data = { year: 2026 } as Bah
+  it('warns when the report date falls after the rate year', () => {
+    expect(bahStaleWarning('2027-01-01', data)).toMatch(/2026.*2027/)
+  })
+  it('is silent within the rate year, without a date, or without data', () => {
+    expect(bahStaleWarning('2026-12-31', data)).toBeNull()
+    expect(bahStaleWarning(null, data)).toBeNull()
+    expect(bahStaleWarning('2027-01-01', null)).toBeNull()
   })
 })
 

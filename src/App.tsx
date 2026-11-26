@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { InstallationPicker } from './InstallationPicker'
-import { BAH_LOOKUP_URL, GRADES, bah, bahFor, distances, drivingMiles, installations, isOconus, type Installation } from './lib/data'
+import { BAH_LOOKUP_URL, GRADES, bah, bahFor, bahStaleWarning, distances, drivingMiles, installations, isOconus, type Installation } from './lib/data'
 import { toIcs } from './lib/ics'
 import { DEFAULTS, HOUSE_HUNTING_MAX_DAYS, TLE_CONUS_MAX_DAYS, addDays, buildPlan, daysBetween, isPlanDate, isWeekend, povTravelDays, type Kind, type PtdyPlacement } from './lib/rules'
 
@@ -97,8 +97,10 @@ export default function App() {
       })
     : null
 
+  const staleBah = bahStaleWarning(report)
   const warnings = [
     ...(plan?.warnings ?? []),
+    ...(staleBah ? [staleBah] : []),
     ...(report ? [] : ['Enter a report date between 1900 and 2099 to build the timeline.']),
     ...([noticeDate, vacateDate].some((d) => d && !isPlanDate(d)) ? ['A notice or vacate date outside 1900–2099 is ignored.'] : []),
     ...(miles === null && from && to ? ['No road distance for this pair (e.g. Hawaii) — enter official DTOD miles; travel days and the timeline are not computed.'] : []),
