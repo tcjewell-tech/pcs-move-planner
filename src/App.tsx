@@ -121,6 +121,8 @@ export default function App() {
         <div>
           <h1 className="text-2xl font-bold">PCS Move Planner</h1>
           <p className="text-sm text-slate-600 dark:text-slate-400">U.S. Army CONUS PCS · travel days, BAH comparison and a back-planned timeline</p>
+          {/* The form is hidden in print, so the printout names the stations here. */}
+          <p className="mt-1 hidden text-sm print:block">Current duty station: <strong>{from?.name ?? '—'}</strong> · Gaining duty station: <strong>{to?.name ?? '—'}</strong></p>
         </div>
         <div className="flex flex-wrap gap-2 print:hidden">
           <label className="text-sm">
