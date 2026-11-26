@@ -31,7 +31,7 @@ describe('inputWarnings', () => {
   it('is silent for good input', () => expect(inputWarnings(ok)).toEqual([]))
   it('reports unknown miles, bad dates and unverified stations', () => {
     const w = inputWarnings({ reportDate: '', noticeDate: '202700-01-01', vacateDate: '', milesUnknown: true, stations: [{ name: 'Test Post', unverified: 'no coordinates' }] }).join('\n')
-    expect(w).toMatch(/No road distance/)
+    expect(w).toMatch(/No stored road distance/)
     expect(w).toMatch(/Enter a report date/)
     expect(w).toMatch(/notice or vacate date/)
     expect(w).toMatch(/Test Post: data unverified \(no coordinates\)/)

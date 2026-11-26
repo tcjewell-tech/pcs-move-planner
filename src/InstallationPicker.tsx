@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
-import { bah, bahFor, searchInstallations, type Installation } from './lib/data'
+import { bah, bahFor, isZipStation, searchInstallations, type Installation } from './lib/data'
 
-/** Typeahead over installation names and aliases (ARIA 1.2 combobox pattern). */
+/** Typeahead over installation names, aliases and ZIP codes (ARIA 1.2 combobox pattern). */
 export function InstallationPicker({ label, value, onChange }: { label: string; value: Installation | null; onChange: (i: Installation) => void }) {
   const id = useId()
   const [query, setQuery] = useState(value?.name ?? '')
@@ -14,6 +14,7 @@ export function InstallationPicker({ label, value, onChange }: { label: string; 
     setOpen(false)
   }
   const resolved = value && bahFor(value)
+  const typedZip = /^\d{5}$/.test(query.trim()) ? query.trim() : null
 
   return (
     <div className="relative">
@@ -27,7 +28,7 @@ export function InstallationPicker({ label, value, onChange }: { label: string; 
         aria-activedescendant={open && results[active] ? `${id}-${results[active].id}` : undefined}
         className="field"
         value={query}
-        placeholder="Name or former name, e.g. Fort Liberty"
+        placeholder="Name, former name or ZIP code"
         onFocus={() => setOpen(true)}
         // Unpicked text reverts, so the box never names a station other than the one computed.
         onBlur={() => { setOpen(false); setQuery(value?.name ?? '') }}
@@ -51,11 +52,17 @@ export function InstallationPicker({ label, value, onChange }: { label: string; 
               onMouseDown={(e) => { e.preventDefault(); pick(i) }}
               onMouseEnter={() => setActive(n)}
             >
-              <span className="font-medium">{i.name}</span>, {i.state}
+              <span className="font-medium">{i.name}</span>{i.state && `, ${i.state}`}
               {i.aliases.length > 0 && <span className="block text-xs text-slate-500 dark:text-slate-400">{i.aliases.join(' · ')}</span>}
+              {isZipStation(i) && <span className="block text-xs text-slate-500 dark:text-slate-400">{bahFor(i)?.name} · not a listed station, so it needs DTOD miles</span>}
             </li>
           ))}
         </ul>
+      )}
+      {open && results.length === 0 && typedZip && (
+        <p role="status" className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+          {bah ? `No BAH rate for ZIP ${typedZip} in the ${bah.year} file.` : 'ZIP entry needs the BAH data, which is not built.'}
+        </p>
       )}
       {value && (
         <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">

@@ -24,6 +24,9 @@ Status as of 2026-10-22. Items marked **OPEN** need a human check before you rel
 - **Every installation ZIP resolves to the expected MHA**, including the Pentagon (22202 → DC053 Washington DC Metro) and the three PO-box ZIPs (Greely → AK405 Fairbanks, Hamilton → NY219 New York City, Redstone → AL003 Huntsville). This closes the ZIP items above.
 - **Spot-checked against the official DoD lookup** (defensetravel.dod.mil/neorates, CY 2026) on 2026-10-29. All four match exactly. See the scenario table below and the TX270 row.
 
+- **Typed ZIP codes** (a station that isn't listed) use the same file. Only ZIPs with rates are accepted; the rest (including those mapped to XX499 "UNKNOWN") are refused. Codes starting `ZZ` are county cost groups and carry no state. A test confirms that exactly the ZIPs in the Alaska and Hawaii ranges are treated as OCONUS.
+- **OPEN:** no county cost group rate has been spot-checked against the official lookup. Check ZIP 59301 (ZZ830): the app shows $2,670 with and $2,103 without dependents for E-7.
+
 ## Distances (`src/data/distances.json`)
 
 - These are OSRM/OpenStreetMap driving distances between the installation coordinates. They are **not DTOD**, and they can differ from DTOD by tens of miles, which can change travel days near a boundary (400, 750, 1100 …). The UI labels them as computed and offers a DTOD override.

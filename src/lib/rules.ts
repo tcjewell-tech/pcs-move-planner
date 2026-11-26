@@ -283,7 +283,7 @@ export interface PlanSource {
 
 export function inputWarnings(s: PlanSource): string[] {
   const w: string[] = []
-  if (s.milesUnknown) w.push('No road distance for this pair (e.g. Hawaii) — enter official DTOD miles; travel days and the timeline are not computed.')
+  if (s.milesUnknown) w.push('No stored road distance for this pair (a typed ZIP, or no road route, as with Hawaii) — enter official DTOD miles; travel days and the timeline are not computed.')
   if (!isPlanDate(s.reportDate)) w.push('Enter a report date between 1900 and 2099 to build the timeline.')
   if ([s.noticeDate, s.vacateDate].some((d) => d && !isPlanDate(d))) w.push('A notice or vacate date outside 1900–2099 is ignored.')
   for (const i of s.stations) if (i.unverified) w.push(`${i.name}: data unverified (${i.unverified}).`)

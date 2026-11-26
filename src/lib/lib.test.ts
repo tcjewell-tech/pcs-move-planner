@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bahFor, bahStaleWarning, drivingMiles, installations, searchInstallations, type Bah } from './data'
+import { bah, bahFor, bahStaleWarning, drivingMiles, installations, isOconus, searchInstallations, zipStation, type Bah } from './data'
 import { toIcs } from './ics'
 
 describe('installation search', () => {
@@ -40,6 +40,32 @@ describe('bahFor', () => {
   })
 })
 
+describe('zipStation', () => {
+  const data: Bah = {
+    year: 2099, source: 'test', mhaNames: {}, zipToMha: { '02108': 'MA120', '12345': 'ZZ510', '00901': 'XX499' },
+    rates: { MA120: { with: {}, without: {} }, ZZ510: { with: {}, without: {} } },
+  }
+  it('builds a station for a ZIP with rates, keeping leading zeros', () => {
+    expect(zipStation(' 02108 ', data)).toMatchObject({ id: 'zip:02108', name: 'ZIP 02108', zip: '02108', state: 'MA', lat: null })
+    expect(zipStation('ZIP 02108', data)?.zip).toBe('02108') // the name it shows can be searched again
+  })
+  it('gives a county cost group no state', () => expect(zipStation('12345', data)?.state).toBe(''))
+  it.each(['00901', '99999', '2108', '021089', 'fort 02108', '__proto__', ''])('rejects "%s"', (q) => expect(zipStation(q, data)).toBeNull())
+  it('rejects everything without BAH data', () => expect(zipStation('02108', null)).toBeNull())
+  it('offers listed posts at that ZIP first, and has no stored miles', () => {
+    const found = searchInstallations('28310')
+    expect(found.map((i) => i.id)).toEqual(['bragg', 'zip:28310'])
+    expect(drivingMiles('bragg', 'zip:28310')).toBeNull()
+  })
+  it('marks exactly the Alaska and Hawaii ZIPs as OCONUS in the bundled data', () => {
+    const wrong = Object.keys(bah!.zipToMha).filter((z) => {
+      const s = zipStation(z)
+      return s && isOconus(s) !== /^(99[5-9]|96[78])/.test(z) // USPS ZIP ranges for AK and HI
+    })
+    expect(wrong).toEqual([])
+  })
+})
+
 describe('bahStaleWarning', () => {
   const data = { year: 2026 } as Bah
   it('warns when the report date falls after the rate year', () => {
@@ -77,7 +103,7 @@ describe('toIcs', () => {
 
 describe('bundled BAH data', () => {
   it('resolves every installation to an MHA with rates for every grade', async () => {
-    const { bah, GRADES } = await import('./data')
+    const { GRADES } = await import('./data')
     expect(bah).not.toBeNull()
     for (const i of installations) {
       const r = bahFor(i)

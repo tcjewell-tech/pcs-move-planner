@@ -146,6 +146,7 @@ export default function App() {
         <form className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 print:hidden" onSubmit={(e) => e.preventDefault()}>
           <InstallationPicker label="Current duty station" value={from} onChange={pickStation(setFrom)} />
           <InstallationPicker label="Gaining duty station" value={to} onChange={pickStation(setTo)} />
+          {bah && <p className="text-xs text-slate-600 dark:text-slate-400">Station not listed? Type its 5-digit ZIP code in either box.</p>}
           <Field label="Report date (from orders)"><input type="date" className="field" value={reportDate} onChange={(e) => setReportDate(e.target.value)} required /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Pay grade">

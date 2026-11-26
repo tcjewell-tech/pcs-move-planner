@@ -41,7 +41,25 @@ export const isOconus = (i: Installation) => i.state === 'AK' || i.state === 'HI
 export function searchInstallations(q: string, limit = 8): Installation[] {
   const s = q.trim().toLowerCase()
   if (!s) return installations.slice(0, limit)
+  const typed = zipStation(s)
+  // Listed posts at that ZIP come first: they have stored distances.
+  if (typed) return [...installations.filter((i) => i.zip === typed.zip), typed]
   return installations.filter((i) => [i.name, ...i.aliases].some((n) => n.toLowerCase().includes(s))).slice(0, limit)
+}
+
+export const isZipStation = (i: Installation) => i.id.startsWith('zip:')
+
+/**
+ * A duty station that isn't listed, typed as "28310" or "ZIP 28310". Null unless the BAH file has
+ * rates for that ZIP. It has no coordinates, so travel miles must come from DTOD.
+ */
+export function zipStation(q: string, data: Bah | null = bah): Installation | null {
+  const zip = /^(?:zip\s*)?(\d{5})$/i.exec(q.trim())?.[1]
+  const mha = zip && data?.zipToMha[zip]
+  if (!zip || !mha || !data?.rates[mha]) return null
+  // County cost group codes (ZZ…) don't name a state. A test checks no Alaska or Hawaii ZIP is in one.
+  const state = mha.startsWith('ZZ') ? '' : mha.slice(0, 2)
+  return { id: `zip:${zip}`, name: `ZIP ${zip}`, aliases: [], state, zip, lat: null, lon: null }
 }
 
 /** OSRM driving miles; null when there is no road route or the pair is missing. */

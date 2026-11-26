@@ -6,6 +6,8 @@ A local web app for U.S. Army soldiers planning a CONUS permanent change of stat
 2. **A BAH comparison** between the two stations for your pay grade and dependency status
 3. **A back-planned timeline**: out-processing, DPS booking, pack-out, TLE windows, sign-out, en-route leave, travel, house hunting, report date, and the SCRA lease-notice deadline. You can export it as an `.ics` calendar file or print it.
 
+For a station that isn't listed, type its 5-digit ZIP code in either station box. BAH follows the ZIP; there is no stored distance, so enter official DTOD miles to get travel days and the timeline.
+
 There are no API keys, no AI calls and no backend. All data ships with the app.
 
 > **Disclaimer.** This is a planning aid, not an entitlement determination. Confirm travel days, leave, TLE and BAH with your **S1**, **Finance (DMPO)**, the **transportation office**, and **legal assistance** (for lease termination). Official distances come from DTOD, not from this app.
