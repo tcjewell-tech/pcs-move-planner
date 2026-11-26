@@ -197,9 +197,10 @@ export function buildPlan(p: PlanInputs) {
     { date: addDays(signOut, -p.packoutLeadDays), label: 'Target pack-out date', category: 'Household goods', source: 'Transportation office scheduling', kind: 'planning default' },
     { date: p.signOutDayWorked ? signOut : addDays(signOut, -1), label: 'Last duty day', category: 'Departure', source: `${AR} paras 2-9c, 11-1f`, kind: 'computed' },
     { date: signOut, label: 'Sign out / depart (DA 31 "from" date)', category: 'Departure', source: `${AR} para 4-7b`, kind: 'computed' },
-    { date: travelStart, end: addDays(arrival, -1), label: `Authorized travel: ${p.travelDays} day(s)`, category: 'En route', source: 'JTR par. 050205', kind: 'regulatory limit' },
     { date: p.reportDate, label: 'Report to gaining unit (DA 31 "to" date = report date in orders)', category: 'Arrival', source: `PCS orders; ${AR} para 4-7b`, kind: 'regulatory limit' },
   ]
+  if (p.travelDays > 0)
+    items.push({ date: travelStart, end: addDays(arrival, -1), label: `Authorized travel: ${p.travelDays} day(s)`, category: 'En route', source: 'JTR par. 050205', kind: 'regulatory limit' })
   const leaveEnd = addDays(travelStart, -1)
   if (leaveEnd >= leaveStart)
     items.push({ date: leaveStart, end: leaveEnd, label: `En-route leave (${leave} chargeable day(s) incl. sign-out/sign-in day charging)`, category: 'En route', source: `${AR} paras 4-7, 11-1`, kind: 'planning default' })

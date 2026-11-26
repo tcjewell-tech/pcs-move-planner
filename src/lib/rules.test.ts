@@ -135,6 +135,11 @@ describe('buildPlan', () => {
   it('a clean plan has no warnings', () => {
     expect(buildPlan(base).warnings).toEqual([])
   })
+  it('omits the travel item when there are no travel days, so no item ends before it starts', () => {
+    const r = buildPlan({ ...base, travelDays: 0 })
+    expect(r.items.some((i) => i.label.startsWith('Authorized travel'))).toBe(false)
+    for (const i of r.items) expect((i.end ?? i.date) >= i.date, i.label).toBe(true)
+  })
   it('omits TLE windows for OCONUS', () => {
     expect(buildPlan({ ...base, oconus: true }).items.some((i) => i.label.startsWith('TLE'))).toBe(false)
   })

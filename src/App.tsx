@@ -73,11 +73,11 @@ export default function App() {
 
   const computedMiles = from && to ? drivingMiles(from.id, to.id) : null
   const miles = dtod !== '' && Number(dtod) > 0 ? Number(dtod) : computedMiles
-  const travelDays = miles === null ? 0 : povTravelDays(miles)
+  const travelDays = miles === null ? null : povTravelDays(miles) // null = unknown, never 0
   const oconus = !!(from && to && (isOconus(from) || isOconus(to)))
   const reportWeekend = !!reportDate && isWeekend(reportDate)
 
-  const plan = reportDate
+  const plan = reportDate && travelDays !== null
     ? buildPlan({
         today, reportDate, travelDays, oconus,
         leaveDays: num(leaveDays), ptdyDays: num(ptdyDays), ptdyPlacement,
@@ -91,7 +91,7 @@ export default function App() {
 
   const warnings = [
     ...(plan?.warnings ?? []),
-    ...(miles === null && from && to ? ['No road distance for this pair (e.g. Hawaii) — enter official DTOD miles; travel days are not computed.'] : []),
+    ...(miles === null && from && to ? ['No road distance for this pair (e.g. Hawaii) — enter official DTOD miles; travel days and the timeline are not computed.'] : []),
     ...[from, to].filter((i) => i?.unverified).map((i) => `${i!.name}: data unverified (${i!.unverified}).`),
   ]
 
@@ -195,7 +195,7 @@ export default function App() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <Card title="Travel">
-              {miles === null ? <p className="text-sm">Enter official DTOD miles to compute travel days.</p> : (
+              {miles === null ? <p className="text-sm">Enter official DTOD miles to compute travel days and the timeline.</p> : (
                 <dl className="space-y-1 text-sm">
                   <div><dt className="inline font-medium">Distance: </dt><dd className="inline">{miles.toLocaleString()} mi {dtod !== '' && Number(dtod) > 0 ? '(official DTOD)' : '(computed driving distance, OSRM — not DTOD)'}</dd></div>
                   <div>
