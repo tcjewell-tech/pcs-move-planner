@@ -1,6 +1,6 @@
 # PCS Move Planner
 
-A local web app for U.S. Army soldiers planning a CONUS permanent change of station (PCS). Pick a current and a gaining duty station, enter the report date and a few details, and it shows:
+A local web app for U.S. Army Soldiers planning a CONUS permanent change of station (PCS). Pick a current and a gaining duty station, enter the report date and a few details, and it shows:
 
 1. **Authorized POV travel days**, with the formula worked out step by step (JTR par. 050205)
 2. **A BAH comparison** between the two stations for your pay grade and dependency status
