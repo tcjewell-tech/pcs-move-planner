@@ -14,6 +14,8 @@ export const addDays = (s: ISODate, n: number): ISODate => iso(new Date(toDate(s
 /** b − a in days. */
 export const daysBetween = (a: ISODate, b: ISODate) => Math.round((toDate(b).getTime() - toDate(a).getTime()) / DAY_MS)
 export const isWeekend = (s: ISODate) => [0, 6].includes(toDate(s).getUTCDay())
+/** A complete, real date in 1900–2099. Check user-entered dates with this before any date math. */
+export const isPlanDate = (s: string) => /^(19|20)\d{2}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(toDate(s).getTime())
 
 // ─── 1. POV travel days ──────────────────────────────────────────────────────
 

@@ -2,12 +2,16 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { InstallationPicker } from './InstallationPicker'
 import { BAH_LOOKUP_URL, GRADES, bah, bahFor, distances, drivingMiles, installations, isOconus, type Installation } from './lib/data'
 import { toIcs } from './lib/ics'
-import { DEFAULTS, HOUSE_HUNTING_MAX_DAYS, TLE_CONUS_MAX_DAYS, addDays, buildPlan, daysBetween, isWeekend, povTravelDays, type Kind, type PtdyPlacement } from './lib/rules'
+import { DEFAULTS, HOUSE_HUNTING_MAX_DAYS, TLE_CONUS_MAX_DAYS, addDays, buildPlan, daysBetween, isPlanDate, isWeekend, povTravelDays, type Kind, type PtdyPlacement } from './lib/rules'
 
 const today = new Date().toLocaleDateString('en-CA') // local YYYY-MM-DD
 const byId = (id: string) => installations.find((i) => i.id === id) ?? null
 const usd = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-const num = (s: string) => (s === '' ? 0 : Math.max(0, Number(s)))
+const num = (s: string) => Math.max(0, Math.floor(Number(s))) // '' → 0
+// Input bounds, not regulatory limits: they keep date math in range.
+const MAX_DAYS = 365
+const MAX_MILES = 25_000
+const capped = (v: string, max = MAX_DAYS) => (Number(v) > max ? String(max) : v)
 
 function Badge({ kind }: { kind: Kind }) {
   const color = kind === 'regulatory limit' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200'
@@ -78,22 +82,25 @@ export default function App() {
   const miles = dtod !== '' && Number(dtod) > 0 ? Number(dtod) : computedMiles
   const travelDays = miles === null ? null : povTravelDays(miles) // null = unknown, never 0
   const oconus = !!(from && to && (isOconus(from) || isOconus(to)))
-  const reportWeekend = !!reportDate && isWeekend(reportDate)
+  const report = isPlanDate(reportDate) ? reportDate : null
+  const reportWeekend = !!report && isWeekend(report)
 
-  const plan = reportDate && travelDays !== null
+  const plan = report && travelDays !== null
     ? buildPlan({
-        today, reportDate, travelDays, oconus,
+        today, reportDate: report, travelDays, oconus,
         leaveDays: num(leaveDays), ptdyDays: num(ptdyDays), ptdyPlacement,
         signOutDayWorked, signInDayNotCharged: signInNotCharged || reportWeekend,
         tleOld: num(tleOld), tleNew: num(tleNew),
-        rentDueDay: rentDueDay === '' ? null : Math.min(31, Math.max(1, Number(rentDueDay))),
-        noticeDate: noticeDate || null, vacateDate: vacateDate || null,
+        rentDueDay: rentDueDay === '' ? null : Math.min(31, Math.max(1, num(rentDueDay))),
+        noticeDate: isPlanDate(noticeDate) ? noticeDate : null, vacateDate: isPlanDate(vacateDate) ? vacateDate : null,
         outprocessingLeadDays: num(outLead), packoutLeadDays: num(packLead),
       })
     : null
 
   const warnings = [
     ...(plan?.warnings ?? []),
+    ...(report ? [] : ['Enter a report date between 1900 and 2099 to build the timeline.']),
+    ...([noticeDate, vacateDate].some((d) => d && !isPlanDate(d)) ? ['A notice or vacate date outside 1900–2099 is ignored.'] : []),
     ...(miles === null && from && to ? ['No road distance for this pair (e.g. Hawaii) — enter official DTOD miles; travel days and the timeline are not computed.'] : []),
     ...[from, to].filter((i) => i?.unverified).map((i) => `${i!.name}: data unverified (${i!.unverified}).`),
   ]
@@ -149,10 +156,10 @@ export default function App() {
               </select>
             </Field>
           </div>
-          <Field label="En-route leave (chargeable days)" kind="planning default"><input type="number" min={0} className="field" value={leaveDays} onChange={(e) => setLeaveDays(e.target.value)} /></Field>
+          <Field label="En-route leave (chargeable days)" kind="planning default"><input type="number" min={0} className="field" value={leaveDays} onChange={(e) => setLeaveDays(capped(e.target.value))} /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="House-hunting PTDY days" kind="regulatory limit" hint={`Max ${HOUSE_HUNTING_MAX_DAYS}, commander approval`}>
-              <input type="number" min={0} max={HOUSE_HUNTING_MAX_DAYS} className="field" value={ptdyDays} onChange={(e) => setPtdyDays(e.target.value)} />
+              <input type="number" min={0} max={HOUSE_HUNTING_MAX_DAYS} className="field" value={ptdyDays} onChange={(e) => setPtdyDays(capped(e.target.value))} />
             </Field>
             <Field label="PTDY placement" kind="planning default">
               <select className="field" value={ptdyPlacement} onChange={(e) => setPtdyPlacement(e.target.value as PtdyPlacement)}>
@@ -168,8 +175,8 @@ export default function App() {
             <label className="flex gap-2"><input type="checkbox" checked={signInNotCharged || reportWeekend} disabled={reportWeekend} onChange={(e) => setSignInNotCharged(e.target.checked)} /> Sign-in day not charged (work more than half of it, or non-duty day/holiday){reportWeekend && ' — report date is a weekend'}</label>
           </fieldset>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="TLE days, old PDS" kind="planning default"><input type="number" min={0} className="field" value={tleOld} onChange={(e) => setTleOld(e.target.value)} /></Field>
-            <Field label="TLE days, new PDS" kind="planning default"><input type="number" min={0} className="field" value={tleNew} onChange={(e) => setTleNew(e.target.value)} /></Field>
+            <Field label="TLE days, old PDS" kind="planning default"><input type="number" min={0} className="field" value={tleOld} onChange={(e) => setTleOld(capped(e.target.value))} /></Field>
+            <Field label="TLE days, new PDS" kind="planning default"><input type="number" min={0} className="field" value={tleNew} onChange={(e) => setTleNew(capped(e.target.value))} /></Field>
           </div>
           <p className="text-xs text-slate-600 dark:text-slate-400">TLE: up to {TLE_CONUS_MAX_DAYS} days total for CONUS, split any way<Badge kind="regulatory limit" /></p>
           <Field label="Rent due day (blank if no lease)" hint="Days 29–31 fall on the last day of shorter months">
@@ -180,11 +187,11 @@ export default function App() {
             <Field label="Vacate by" kind="planning default" hint="Default: departure date"><input type="date" className="field" value={vacateDate} onChange={(e) => setVacateDate(e.target.value)} /></Field>
           </div>
           <Field label="Official DTOD miles (override)" hint="DTOD is authoritative for entitlements (CAC required). Replaces the computed distance everywhere.">
-            <input type="number" min={0} className="field" value={dtod} onChange={(e) => setDtod(e.target.value)} placeholder={computedMiles?.toString() ?? 'required for this pair'} />
+            <input type="number" min={0} className="field" value={dtod} onChange={(e) => setDtod(capped(e.target.value, MAX_MILES))} placeholder={computedMiles?.toString() ?? 'required for this pair'} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Out-processing lead (days)" kind="planning default"><input type="number" min={0} className="field" value={outLead} onChange={(e) => setOutLead(e.target.value)} /></Field>
-            <Field label="Pack-out lead (days)" kind="planning default"><input type="number" min={0} className="field" value={packLead} onChange={(e) => setPackLead(e.target.value)} /></Field>
+            <Field label="Out-processing lead (days)" kind="planning default"><input type="number" min={0} className="field" value={outLead} onChange={(e) => setOutLead(capped(e.target.value))} /></Field>
+            <Field label="Pack-out lead (days)" kind="planning default"><input type="number" min={0} className="field" value={packLead} onChange={(e) => setPackLead(capped(e.target.value))} /></Field>
           </div>
         </form>
 

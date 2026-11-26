@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
-  DEFAULTS, addDays, buildPlan, chargeableLeave, daysBetween, nextDueAfter, povTravelDays,
+  DEFAULTS, addDays, buildPlan, chargeableLeave, daysBetween, isPlanDate, nextDueAfter, povTravelDays,
   scraLatestNotice, scraTermination, signOutDate, tleCheck, type PlanInputs,
 } from './rules'
+
+describe('isPlanDate', () => {
+  it.each(['2026-11-26', '1999-01-01', '2099-12-31'])('accepts %s', (d) => expect(isPlanDate(d)).toBe(true))
+  // A date input emits values like these while the year is being typed.
+  it.each(['', '0002-02-24', '202700-02-24', '2026-13-01'])('rejects "%s"', (d) => expect(isPlanDate(d)).toBe(false))
+})
 
 describe('povTravelDays (JTR 050205)', () => {
   it.each([
