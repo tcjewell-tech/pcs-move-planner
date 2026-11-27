@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { bah, bahFor, bahStaleWarning, drivingMiles, installations, isOconus, searchInstallations, zipStation, type Bah } from './data'
-import { toIcs } from './ics'
+import { removedEvents, toIcs, toSaved } from './ics'
+import type { TimelineItem } from './rules'
 
 describe('installation search', () => {
   it('finds posts by former name (2023 renames)', () => {
@@ -84,6 +85,7 @@ describe('toIcs', () => {
       { id: 'travel', date: '2027-01-07', end: '2027-01-09', label: 'Travel; 3 days, by POV', category: 'En route', source: 'JTR par. 050205', kind: 'regulatory limit' },
       { id: 'report', date: '2027-01-15', label: 'Report', category: 'Arrival', source: 'orders', kind: 'computed' },
     ],
+    [],
     new Date('2026-10-22T12:00:00Z'),
   )
   it('writes all-day events with exclusive DTEND and escaped text', () => {
@@ -96,6 +98,24 @@ describe('toIcs', () => {
   it('takes the UID from the item ID, not its date or position', () => {
     expect(ics.match(/UID:.*/g)).toEqual(['UID:travel@pcs-move-planner', 'UID:report@pcs-move-planner'])
   })
+  it('numbers each download higher, so a later one outranks it', () => {
+    expect(ics.match(/SEQUENCE:\d+/g)).toEqual(['SEQUENCE:1792670400', 'SEQUENCE:1792670400'])
+    expect(ics.match(/STATUS:\w+/g)).toEqual(['STATUS:CONFIRMED', 'STATUS:CONFIRMED'])
+  })
+  it('cancels an event dropped since the last download, until it returns', () => {
+    const travel: TimelineItem = { id: 'travel', date: '2027-01-07', label: 'Travel', category: 'En route', source: 's', kind: 'computed' }
+    const ptdy: TimelineItem = { ...travel, id: 'ptdy', date: '2027-01-10', label: 'House hunting' }
+    const first = toSaved([travel, ptdy], [])
+    const gone = removedEvents(first, [travel])
+    expect(gone).toEqual([{ id: 'ptdy', date: '2027-01-10', label: 'House hunting' }])
+    const next = toIcs([travel], gone, new Date('2026-10-23T12:00:00Z')).replace(/\r\n /g, '')
+    expect(next).toMatch(/UID:ptdy@pcs-move-planner[^]*DTSTART;VALUE=DATE:20270110\r\nDTEND;VALUE=DATE:20270111\r\nSTATUS:CANCELLED/)
+    expect(next).toContain('SUMMARY:Removed from PCS plan: House hunting')
+    expect(removedEvents(toSaved([travel], gone), [travel])).toEqual(gone) // still cancelled next time
+    expect(removedEvents(toSaved([travel], gone), [travel, ptdy])).toEqual([])
+  })
+  it.each([null, '', 'not json', '{}', '[null, 1, "x"]', '[{"id":"ptdy","date":"soon","label":"x"}]', '[{"id":"a\\r\\nB:1","date":"2027-01-10","label":"x"}]'])(
+    'ignores unreadable saved events: %s', (saved) => expect(removedEvents(saved, [])).toEqual([]))
   it('folds lines to 75 octets', () => {
     for (const line of ics.split('\r\n')) expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75)
   })

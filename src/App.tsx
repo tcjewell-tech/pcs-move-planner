@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { InstallationPicker } from './InstallationPicker'
 import { BAH_LOOKUP_URL, GRADES, bah, bahFor, bahStaleWarning, distances, drivingMiles, installations, isOconus, type Installation } from './lib/data'
-import { toIcs } from './lib/ics'
+import { removedEvents, toIcs, toSaved } from './lib/ics'
 import { DEFAULTS, HOUSE_HUNTING_MAX_DAYS, TLE_CONUS_MAX_DAYS, addDays, buildPlan, daysBetween, inputWarnings, isPlanDate, isWeekend, povTravelDays, povTravelSteps, travelBasis, type Kind, type PtdyPlacement } from './lib/rules'
 
 const today = new Date().toLocaleDateString('en-CA') // local YYYY-MM-DD
@@ -106,9 +106,14 @@ export default function App() {
 
   const downloadIcs = () => {
     if (!plan) return
-    const url = URL.createObjectURL(new Blob([toIcs(plan.items)], { type: 'text/calendar' }))
+    // The last download's events, so any since removed from the plan can be cancelled.
+    let saved: string | null = null
+    try { saved = localStorage.getItem('icsEvents') } catch { /* storage blocked */ }
+    const removed = removedEvents(saved, plan.items)
+    const url = URL.createObjectURL(new Blob([toIcs(plan.items, removed)], { type: 'text/calendar' }))
     Object.assign(document.createElement('a'), { href: url, download: 'pcs-timeline.ics' }).click()
     URL.revokeObjectURL(url)
+    try { localStorage.setItem('icsEvents', toSaved(plan.items, removed)) } catch { /* storage blocked */ }
   }
 
   const bahFrom = from && bahFor(from)
@@ -275,6 +280,7 @@ export default function App() {
                   </tbody>
                 </table>
               </div>
+              <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 print:hidden">A new .ics download marks events you have removed since your last download in this browser as cancelled. Calendar apps may handle this differently, so check your calendar after importing.</p>
             </Card>
           )}
 

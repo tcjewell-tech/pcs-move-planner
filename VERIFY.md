@@ -46,6 +46,10 @@ Status as of 2026-10-22. Items marked **OPEN** need a human check before you rel
   - **OPEN (planning assumption):** with no leave to charge on the report day (0 leave days), the timeline runs travel or house hunting through the report date.
 - **50 U.S.C. §3955:** text read from law.cornell.edu. Termination takes effect 30 days after the first rent due date *after* notice is delivered. Rent through termination is prorated (§3955(e)).
 
+## Calendar export
+
+- **OPEN:** importing an `.ics` again has not been tried in Google Calendar, Outlook or Apple Calendar. Re-exports keep each event's UID, raise `SEQUENCE`, and mark events removed since the last download in the same browser as `STATUS:CANCELLED`. A client may ignore any of these, and downloads from another browser or from before this change can't be cancelled.
+
 ## Test scenarios
 
 All three scenarios ran end to end in the app on 2026-10-29: report date 2027-01-27, 10 days of leave, no PTDY, default day charging.
