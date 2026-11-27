@@ -1,17 +1,14 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ChangeEvent, type FocusEvent, type ReactNode } from 'react'
 import { InstallationPicker } from './InstallationPicker'
-import { BAH_LOOKUP_URL, GRADES, bah, bahFor, bahStaleWarning, distances, drivingMiles, installations, isOconus, type Installation } from './lib/data'
+import { BAH_LOOKUP_URL, GRADES, bah, distances, installations } from './lib/data'
 import { removedEvents, toIcs, toSaved } from './lib/ics'
-import { DEFAULTS, HOUSE_HUNTING_MAX_DAYS, TLE_CONUS_MAX_DAYS, addDays, buildPlan, daysBetween, inputWarnings, isPlanDate, isWeekend, povTravelDays, povTravelSteps, travelBasis, type Kind, type PtdyPlacement } from './lib/rules'
+import { MAX_DAYS, MAX_MILES, capped, createMovePlan, defaultForm, fromSearch, normalizeDays, normalizeDueDay, normalizeMiles, toSearch, type PlannerFormState } from './lib/planner'
+import { HOUSE_HUNTING_MAX_DAYS, TLE_CONUS_MAX_DAYS, daysBetween, povTravelSteps, travelBasis, type Kind, type PtdyPlacement } from './lib/rules'
 
-const today = new Date().toLocaleDateString('en-CA') // local YYYY-MM-DD
-const byId = (id: string) => installations.find((i) => i.id === id) ?? null
+const localToday = () => new Date().toLocaleDateString('en-CA') // local YYYY-MM-DD
 const usd = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-const num = (s: string) => Math.max(0, Math.floor(Number(s))) // '' → 0
-// Input bounds, not regulatory limits: they keep date math in range.
-const MAX_DAYS = 365
-const MAX_MILES = 25_000
-const capped = (v: string, max = MAX_DAYS) => (Number(v) > max ? String(max) : v)
+const signedUsd = (n: number) => (n > 0 ? '+' : '') + usd(n)
+const fromToday = (today: string, d: string) => { const n = daysBetween(today, d); return n === 0 ? 'today' : n > 0 ? `in ${n} d` : `${-n} d ago` }
 
 function Badge({ kind }: { kind: Kind }) {
   const color = kind === 'regulatory limit' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200'
@@ -39,6 +36,16 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
+function Stat({ label, children, note }: { label: string; children: ReactNode; note?: ReactNode }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <dt className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</dt>
+      <dd className="mt-1 text-lg font-bold">{children}</dd>
+      {note && <dd className="text-xs text-slate-600 dark:text-slate-400">{note}</dd>}
+    </div>
+  )
+}
+
 function useTheme() {
   const [theme, setTheme] = useState<'system' | 'light' | 'dark'>(() => {
     try { return (localStorage.getItem('theme') as 'light' | 'dark') ?? 'system' } catch { return 'system' }
@@ -54,71 +61,70 @@ function useTheme() {
   return [theme, setTheme] as const
 }
 
+/** Today's local date, rechecked every minute so a tab left open overnight moves on. */
+function useToday() {
+  const [today, setToday] = useState(localToday)
+  useEffect(() => {
+    const t = setInterval(() => setToday(localToday()), 60_000)
+    return () => clearInterval(t)
+  }, [])
+  return today
+}
+
 export default function App() {
   const [theme, setTheme] = useTheme()
-  const [from, setFrom] = useState<Installation | null>(byId('bragg'))
-  const [to, setTo] = useState<Installation | null>(byId('leavenworth'))
-  const [reportDate, setReportDate] = useState(addDays(today, 90))
-  const [grade, setGrade] = useState('E-7')
-  const [withDeps, setWithDeps] = useState(true)
-  const [leaveDays, setLeaveDays] = useState(String(DEFAULTS.leaveDays))
-  const [ptdyDays, setPtdyDays] = useState(String(DEFAULTS.ptdyDays))
-  const [ptdyPlacement, setPtdyPlacement] = useState<PtdyPlacement>(DEFAULTS.ptdyPlacement)
-  const [signOutDayWorked, setSignOutDayWorked] = useState(DEFAULTS.signOutDayWorked)
-  const [signInNotCharged, setSignInNotCharged] = useState(DEFAULTS.signInDayNotCharged)
-  const [rentDueDay, setRentDueDay] = useState('1')
-  const [noticeDate, setNoticeDate] = useState('')
-  const [vacateDate, setVacateDate] = useState('')
-  const [tleOld, setTleOld] = useState(String(DEFAULTS.tleOld))
-  const [tleNew, setTleNew] = useState(String(DEFAULTS.tleNew))
-  const [dtod, setDtod] = useState('')
-  const [outLead, setOutLead] = useState(String(DEFAULTS.outprocessingLeadDays))
-  const [packLead, setPackLead] = useState(String(DEFAULTS.packoutLeadDays))
+  const today = useToday()
+  // The URL holds the whole form, so a bookmark or a texted link reopens the same plan.
+  const [form, setForm] = useState(() => fromSearch(window.location.search, localToday()))
+  const [copied, setCopied] = useState('')
+  const set = <K extends keyof PlannerFormState>(k: K) => (v: PlannerFormState[K]) => setForm((f) => ({ ...f, [k]: v }))
+
+  useEffect(() => {
+    const q = `?${toSearch(form)}`
+    if (q !== window.location.search) window.history.replaceState(null, '', q)
+  }, [form])
+  useEffect(() => {
+    if (!copied) return
+    const t = setTimeout(() => setCopied(''), 2000)
+    return () => clearTimeout(t)
+  }, [copied])
 
   // A DTOD override belongs to one pair of stations, so changing either clears it.
-  const pickStation = (set: (i: Installation) => void) => (i: Installation) => { set(i); setDtod('') }
-
-  const computedMiles = from && to ? drivingMiles(from.id, to.id) : null
-  const miles = dtod !== '' && Number(dtod) > 0 ? Number(dtod) : computedMiles
-  const travelDays = miles === null ? null : povTravelDays(miles) // null = unknown, never 0
-  const oconus = !!(from && to && (isOconus(from) || isOconus(to)))
-  const report = isPlanDate(reportDate) ? reportDate : null
-  const reportWeekend = !!report && isWeekend(report)
-
-  const plan = report && travelDays !== null
-    ? buildPlan({
-        today, reportDate: report, travelDays, oconus,
-        leaveDays: num(leaveDays), ptdyDays: num(ptdyDays), ptdyPlacement,
-        signOutDayWorked, signInDayNotCharged: signInNotCharged,
-        tleOld: num(tleOld), tleNew: num(tleNew),
-        rentDueDay: rentDueDay === '' ? null : Math.min(31, Math.max(1, num(rentDueDay))),
-        noticeDate: isPlanDate(noticeDate) ? noticeDate : null, vacateDate: isPlanDate(vacateDate) ? vacateDate : null,
-        outprocessingLeadDays: num(outLead), packoutLeadDays: num(packLead),
-      })
-    : null
-
-  const staleBah = bahStaleWarning(report)
-  const warnings = [
-    ...(plan?.warnings ?? []),
-    ...(staleBah ? [staleBah] : []),
-    ...inputWarnings({ reportDate, noticeDate, vacateDate, milesUnknown: miles === null && !!from && !!to, stations: [from, to].filter((i) => i !== null) }),
-  ]
-
-  const downloadIcs = () => {
-    if (!plan) return
-    // The last download's events, so any since removed from the plan can be cancelled.
-    let saved: string | null = null
-    try { saved = localStorage.getItem('icsEvents') } catch { /* storage blocked */ }
-    const removed = removedEvents(saved, plan.items)
-    const url = URL.createObjectURL(new Blob([toIcs(plan.items, removed)], { type: 'text/calendar' }))
-    Object.assign(document.createElement('a'), { href: url, download: 'pcs-timeline.ics' }).click()
-    URL.revokeObjectURL(url)
-    try { localStorage.setItem('icsEvents', toSaved(plan.items, removed)) } catch { /* storage blocked */ }
+  const pickStation = (k: 'from' | 'to') => (i: PlannerFormState['from']) => setForm((f) => ({ ...f, [k]: i, dtod: '' }))
+  const swap = () => setForm((f) => ({ ...f, from: f.to, to: f.from, dtod: '' }))
+  const copyLink = () => {
+    const failed = () => setCopied('Copy failed — copy the address bar')
+    if (!navigator.clipboard) return failed() // only offered on https and localhost
+    navigator.clipboard.writeText(window.location.href).then(() => setCopied('Copied'), failed)
+  }
+  /** Props for a number box: capped while typing, normalized on leaving it, so it shows the value used. */
+  const numberProps = (k: 'leaveDays' | 'ptdyDays' | 'tleOld' | 'tleNew' | 'outLead' | 'packLead' | 'rentDueDay' | 'dtod') => {
+    const [max, normalize] = k === 'dtod' ? [MAX_MILES, normalizeMiles] : k === 'rentDueDay' ? [31, normalizeDueDay] : [MAX_DAYS, normalizeDays]
+    return {
+      type: 'number', inputMode: 'numeric' as const, min: k === 'rentDueDay' ? 1 : 0, max, step: 1, className: 'field', value: form[k],
+      onChange: (e: ChangeEvent<HTMLInputElement>) => set(k)(capped(e.target.value, max)),
+      onBlur: (e: FocusEvent<HTMLInputElement>) => set(k)(normalize(e.target.value)),
+    }
   }
 
-  const bahFrom = from && bahFor(from)
-  const bahTo = to && bahFor(to)
-  const dep = withDeps ? 'with' : 'without'
+  const m = createMovePlan(form, today)
+  const { plan } = m
+  const basis = travelBasis(m.oconus)
+  const dep = form.withDeps ? 'with' : 'without'
+
+  const downloadIcs = () => {
+    if (!plan || !form.from || !form.to || !m.planKey) return
+    // The last download of this move, so events since removed from it can be cancelled. Another move keeps its own.
+    const storeKey = `icsEvents:${m.planKey}`
+    let saved: string | null = null
+    try { saved = localStorage.getItem(storeKey) } catch { /* storage blocked */ }
+    const removed = removedEvents(saved, plan.items)
+    const ics = toIcs(plan.items, { fromName: form.from.name, toName: form.to.name, planKey: m.planKey }, removed)
+    const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }))
+    Object.assign(document.createElement('a'), { href: url, download: 'pcs-timeline.ics' }).click()
+    URL.revokeObjectURL(url)
+    try { localStorage.setItem(storeKey, toSaved(plan.items, removed)) } catch { /* storage blocked */ }
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
@@ -127,9 +133,9 @@ export default function App() {
           <h1 className="text-2xl font-bold">PCS Move Planner</h1>
           <p className="text-sm text-slate-600 dark:text-slate-400">U.S. Army CONUS PCS · travel days, BAH comparison and a back-planned timeline</p>
           {/* The form is hidden in print, so the printout names the stations here. */}
-          <p className="mt-1 hidden text-sm print:block">Current duty station: <strong>{from?.name ?? '—'}</strong> · Gaining duty station: <strong>{to?.name ?? '—'}</strong></p>
+          <p className="mt-1 hidden text-sm print:block">Current duty station: <strong>{form.from?.name ?? '—'}</strong> · Gaining duty station: <strong>{form.to?.name ?? '—'}</strong></p>
         </div>
-        <div className="flex flex-wrap gap-2 print:hidden">
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
           <label className="text-sm">
             <span className="sr-only">Theme</span>
             <select className="btn" value={theme} onChange={(e) => setTheme(e.target.value as typeof theme)}>
@@ -138,8 +144,11 @@ export default function App() {
               <option value="dark">Dark</option>
             </select>
           </label>
-          <button className="btn" onClick={() => window.print()}>Print / PDF</button>
-          <button className="btn" onClick={downloadIcs} disabled={!plan}>Download .ics</button>
+          <button type="button" className="btn" onClick={copyLink}>Copy Share Link</button>
+          <button type="button" className="btn" onClick={() => setForm(defaultForm(today))}>Reset</button>
+          <button type="button" className="btn" onClick={() => window.print()}>Print / PDF</button>
+          <button type="button" className="btn" onClick={downloadIcs} disabled={!plan}>Download .ics</button>
+          <span role="status" className="text-xs text-slate-600 dark:text-slate-400">{copied}</span>
         </div>
       </header>
 
@@ -147,29 +156,42 @@ export default function App() {
         Planning aid only — not an entitlement determination. Confirm with your S1, Finance, the transportation office and legal assistance.
       </p>
 
+      <dl aria-label="PCS snapshot" className="mb-4 grid gap-3 sm:grid-cols-3">
+        <Stat label="Departure date" note={plan ? `Sign out ${fromToday(today, plan.signOut)} · report ${m.report}` : undefined}>
+          {plan ? plan.signOut : <span className="text-sm font-normal">{m.report ? 'Enter official DTOD miles' : 'Enter a report date'}</span>}
+        </Stat>
+        <Stat label={`BAH change (${form.grade}, ${dep} dependents)`} note={m.bahChange ? `${signedUsd(m.bahChange.annual)}/year` : undefined}>
+          {m.bahChange ? `${signedUsd(m.bahChange.monthly)}/month` : <span className="text-sm font-normal">{bah ? 'Rate not available for one station' : 'BAH data not built'}</span>}
+        </Stat>
+        <Stat label="Chargeable leave / travel days" note={plan ? <>{basis.title} days<Badge kind={basis.kind} /></> : undefined}>
+          {plan ? `${plan.leave} leave · ${m.travelDays} travel` : <span className="text-sm font-normal">{m.report ? 'Enter official DTOD miles' : 'Enter a report date'}</span>}
+        </Stat>
+      </dl>
+
       <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
         <form className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 print:hidden" onSubmit={(e) => e.preventDefault()}>
-          <InstallationPicker label="Current duty station" value={from} onChange={pickStation(setFrom)} />
-          <InstallationPicker label="Gaining duty station" value={to} onChange={pickStation(setTo)} />
+          <InstallationPicker label="Current duty station" value={form.from} onChange={pickStation('from')} />
+          <button type="button" className="btn w-full" onClick={swap} disabled={!form.from && !form.to}>⇅ Swap Stations</button>
+          <InstallationPicker label="Gaining duty station" value={form.to} onChange={pickStation('to')} />
           {bah && <p className="text-xs text-slate-600 dark:text-slate-400">Station not listed? Type its 5-digit ZIP code in either box.</p>}
-          <Field label="Report date (from orders)"><input type="date" className="field" value={reportDate} onChange={(e) => setReportDate(e.target.value)} required /></Field>
+          <Field label="Report date (from orders)"><input type="date" className="field" value={form.reportDate} onChange={(e) => set('reportDate')(e.target.value)} required /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Pay grade">
-              <select className="field" value={grade} onChange={(e) => setGrade(e.target.value)}>{GRADES.map((g) => <option key={g}>{g}</option>)}</select>
+              <select className="field" value={form.grade} onChange={(e) => set('grade')(e.target.value)}>{GRADES.map((g) => <option key={g}>{g}</option>)}</select>
             </Field>
             <Field label="Dependents">
-              <select className="field" value={withDeps ? 'with' : 'without'} onChange={(e) => setWithDeps(e.target.value === 'with')}>
+              <select className="field" value={dep} onChange={(e) => set('withDeps')(e.target.value === 'with')}>
                 <option value="with">With</option><option value="without">Without</option>
               </select>
             </Field>
           </div>
-          <Field label="En-route leave (chargeable days)" kind="planning default"><input type="number" min={0} className="field" value={leaveDays} onChange={(e) => setLeaveDays(capped(e.target.value))} /></Field>
+          <Field label="En-route leave (chargeable days)" kind="planning default"><input {...numberProps('leaveDays')} /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="House-hunting PTDY days" kind="regulatory limit" hint={`Max ${HOUSE_HUNTING_MAX_DAYS}, commander approval`}>
-              <input type="number" min={0} max={HOUSE_HUNTING_MAX_DAYS} className="field" value={ptdyDays} onChange={(e) => setPtdyDays(capped(e.target.value))} />
+              <input {...numberProps('ptdyDays')} />
             </Field>
             <Field label="PTDY placement" kind="planning default">
-              <select className="field" value={ptdyPlacement} onChange={(e) => setPtdyPlacement(e.target.value as PtdyPlacement)}>
+              <select className="field" value={form.ptdyPlacement} onChange={(e) => set('ptdyPlacement')(e.target.value as PtdyPlacement)}>
                 <option value="before-report">Just before report date</option>
                 <option value="after-departure">Right after departure</option>
                 <option value="after-signin">After in-processing</option>
@@ -178,51 +200,51 @@ export default function App() {
           </div>
           <fieldset className="space-y-1 text-sm">
             <legend className="font-medium">Day charging (AR 600-8-10)</legend>
-            <label className="flex gap-2"><input type="checkbox" checked={signOutDayWorked} onChange={(e) => setSignOutDayWorked(e.target.checked)} /> I'll work more than half of a scheduled duty day on sign-out day</label>
-            <label className="flex gap-2"><input type="checkbox" checked={signInNotCharged || reportWeekend} disabled={reportWeekend} onChange={(e) => setSignInNotCharged(e.target.checked)} /> Sign-in day not charged (work more than half of it, or non-duty day/holiday){reportWeekend && ' — report date is a weekend'}</label>
+            <label className="flex gap-2"><input type="checkbox" checked={form.signOutDayWorked} onChange={(e) => set('signOutDayWorked')(e.target.checked)} /> I'll work more than half of a scheduled duty day on sign-out day</label>
+            <label className="flex gap-2"><input type="checkbox" checked={form.signInNotCharged || m.reportWeekend} disabled={m.reportWeekend} onChange={(e) => set('signInNotCharged')(e.target.checked)} /> Sign-in day not charged (work more than half of it, or non-duty day/holiday){m.reportWeekend && ' — report date is a weekend'}</label>
           </fieldset>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="TLE days, old PDS" kind="planning default"><input type="number" min={0} className="field" value={tleOld} onChange={(e) => setTleOld(capped(e.target.value))} /></Field>
-            <Field label="TLE days, new PDS" kind="planning default"><input type="number" min={0} className="field" value={tleNew} onChange={(e) => setTleNew(capped(e.target.value))} /></Field>
+            <Field label="TLE days, old PDS" kind="planning default"><input {...numberProps('tleOld')} /></Field>
+            <Field label="TLE days, new PDS" kind="planning default"><input {...numberProps('tleNew')} /></Field>
           </div>
           <p className="text-xs text-slate-600 dark:text-slate-400">TLE: up to {TLE_CONUS_MAX_DAYS} days total for CONUS, split any way<Badge kind="regulatory limit" /></p>
           <Field label="Rent due day (blank if no lease)" hint="Days 29–31 fall on the last day of shorter months">
-            <input type="number" min={1} max={31} className="field" value={rentDueDay} onChange={(e) => setRentDueDay(e.target.value)} />
+            <input {...numberProps('rentDueDay')} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Notice delivered (optional)"><input type="date" className="field" value={noticeDate} onChange={(e) => setNoticeDate(e.target.value)} /></Field>
-            <Field label="Vacate by" kind="planning default" hint="Default: departure date"><input type="date" className="field" value={vacateDate} onChange={(e) => setVacateDate(e.target.value)} /></Field>
+            <Field label="Notice delivered (optional)"><input type="date" className="field" value={form.noticeDate} onChange={(e) => set('noticeDate')(e.target.value)} /></Field>
+            <Field label="Vacate by" kind="planning default" hint="Default: departure date"><input type="date" className="field" value={form.vacateDate} onChange={(e) => set('vacateDate')(e.target.value)} /></Field>
           </div>
-          <Field label="Official DTOD miles (override)" hint="DTOD is authoritative for entitlements (CAC required). Replaces the computed distance everywhere.">
-            <input type="number" min={0} className="field" value={dtod} onChange={(e) => setDtod(capped(e.target.value, MAX_MILES))} placeholder={computedMiles?.toString() ?? 'required for this pair'} />
+          <Field label="Official DTOD miles (override)" hint="DTOD is authoritative for entitlements (CAC required). Replaces the computed distance everywhere; 0 is a local move.">
+            <input {...numberProps('dtod')} placeholder={m.computedMiles?.toString() ?? 'required for this pair'} />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Out-processing lead (days)" kind="planning default"><input type="number" min={0} className="field" value={outLead} onChange={(e) => setOutLead(capped(e.target.value))} /></Field>
-            <Field label="Pack-out lead (days)" kind="planning default"><input type="number" min={0} className="field" value={packLead} onChange={(e) => setPackLead(capped(e.target.value))} /></Field>
+            <Field label="Out-processing lead (days)" kind="planning default"><input {...numberProps('outLead')} /></Field>
+            <Field label="Pack-out lead (days)" kind="planning default"><input {...numberProps('packLead')} /></Field>
           </div>
         </form>
 
         <div className="space-y-4">
-          {warnings.length > 0 && (
+          {m.warnings.length > 0 && (
             <section role="alert" className="rounded-lg border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-700 dark:bg-rose-950 dark:text-rose-100">
               <h2 className="mb-1 font-semibold">Warnings</h2>
-              <ul className="list-disc pl-5">{warnings.map((w) => <li key={w}>{w}</li>)}</ul>
+              <ul className="list-disc pl-5">{m.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
             </section>
           )}
 
           <div className="grid gap-4 md:grid-cols-2">
             <Card title="Travel">
-              {miles === null ? <p className="text-sm">Enter official DTOD miles to compute travel days and the timeline.</p> : (
+              {m.miles === null ? <p className="text-sm">Enter official DTOD miles to compute travel days and the timeline.</p> : (
                 <dl className="space-y-1 text-sm">
-                  <div><dt className="inline font-medium">Distance: </dt><dd className="inline">{miles.toLocaleString()} mi {dtod !== '' && Number(dtod) > 0 ? '(official DTOD)' : '(computed driving distance, OSRM — not DTOD)'}</dd></div>
+                  <div><dt className="inline font-medium">Distance: </dt><dd className="inline">{m.miles.toLocaleString()} mi {m.milesFromDtod ? '(official DTOD)' : '(computed driving distance, OSRM — not DTOD)'}</dd></div>
                   <div>
                     <dt className="font-medium">Formula (JTR par. 050205)</dt>
                     <dd className="font-mono text-xs">
-                      {povTravelSteps(miles).map((line) => <span key={line} className="block">{line}</span>)}
+                      {povTravelSteps(m.miles).map((line) => <span key={line} className="block">{line}</span>)}
                     </dd>
                   </div>
-                  <div className="text-base"><dt className="inline font-medium">{travelBasis(oconus).title} days: </dt><dd className="inline font-bold">{travelDays}</dd><Badge kind={travelBasis(oconus).kind} /></div>
-                  {oconus && <p className="text-xs text-amber-700 dark:text-amber-400">Alaska/Hawaii move: this count is not verified for it, because travel time depends on mode and ports. TLE OCONUS rules are out of scope for v1.</p>}
+                  <div className="text-base"><dt className="inline font-medium">{basis.title} days: </dt><dd className="inline font-bold">{m.travelDays}</dd><Badge kind={basis.kind} /></div>
+                  {m.oconus && <p className="text-xs text-amber-700 dark:text-amber-400">Alaska/Hawaii move: this count is not verified for it, because travel time depends on mode and ports. TLE OCONUS rules are out of scope for v1.</p>}
                 </dl>
               )}
             </Card>
@@ -233,20 +255,20 @@ export default function App() {
               ) : (
                 <>
                   <table className="w-full text-sm">
-                    <thead><tr className="text-left text-xs text-slate-500 dark:text-slate-400"><th scope="col">{grade}</th><th scope="col">With deps</th><th scope="col">Without</th></tr></thead>
+                    <thead><tr className="text-left text-xs text-slate-500 dark:text-slate-400"><th scope="col">{form.grade}</th><th scope="col">With deps</th><th scope="col">Without</th></tr></thead>
                     <tbody>
-                      {[{ k: 'Current', inst: from, r: bahFrom }, { k: 'Gaining', inst: to, r: bahTo }].map(({ k, inst, r }) => (
+                      {[{ k: 'Current', inst: form.from, r: m.bahFrom }, { k: 'Gaining', inst: form.to, r: m.bahTo }].map(({ k, inst, r }) => (
                         <tr key={k} className="border-t border-slate-200 dark:border-slate-700">
                           <th scope="row" className="py-1 text-left font-normal">{k}<span className="block text-xs text-slate-500 dark:text-slate-400">{r ? `${r.mha} · ${r.name}` : inst ? `No MHA found for ZIP ${inst.zip}` : '—'}</span></th>
-                          <td className={withDeps ? 'font-bold' : ''}>{r?.with[grade] !== undefined ? usd(r.with[grade]) : '—'}</td>
-                          <td className={!withDeps ? 'font-bold' : ''}>{r?.without[grade] !== undefined ? usd(r.without[grade]) : '—'}</td>
+                          <td className={form.withDeps ? 'font-bold' : ''}>{r?.with[form.grade] !== undefined ? usd(r.with[form.grade]) : '—'}</td>
+                          <td className={!form.withDeps ? 'font-bold' : ''}>{r?.without[form.grade] !== undefined ? usd(r.without[form.grade]) : '—'}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  {bahFrom && bahTo && bahFrom[dep][grade] !== undefined && bahTo[dep][grade] !== undefined ? (
+                  {m.bahChange ? (
                     <p className="mt-2 text-sm">
-                      Change ({withDeps ? 'with' : 'without'} dependents): <strong>{usd(bahTo[dep][grade] - bahFrom[dep][grade])}/month</strong>, {usd((bahTo[dep][grade] - bahFrom[dep][grade]) * 12)}/year
+                      Change ({dep} dependents): <strong>{usd(m.bahChange.monthly)}/month</strong>, {usd(m.bahChange.annual)}/year
                     </p>
                   ) : <p className="mt-2 text-sm">Rate not available for one station — see the official lookup.</p>}
                   <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">{bah.source} · <a className="link" href={BAH_LOOKUP_URL} target="_blank" rel="noreferrer">Official DoD BAH lookup</a></p>
@@ -258,7 +280,7 @@ export default function App() {
           {plan && (
             <Card title="Timeline">
               <p className="mb-3 text-sm">
-                Sign out <strong>{plan.signOut}</strong> · report <strong>{reportDate}</strong> · chargeable leave <strong>{plan.leave} day(s)</strong> (departure through report date, inclusive, minus {travelDays} travel{plan.enRoutePtdy > 0 ? ` and ${plan.enRoutePtdy} PTDY` : ''} day(s))
+                Sign out <strong>{plan.signOut}</strong> · report <strong>{m.report}</strong> · chargeable leave <strong>{plan.leave} day(s)</strong> (departure through report date, inclusive, minus {m.travelDays} travel{plan.enRoutePtdy > 0 ? ` and ${plan.enRoutePtdy} PTDY` : ''} day(s))
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -271,7 +293,7 @@ export default function App() {
                     {plan.items.map((it) => (
                       <tr key={it.id} className="border-t border-slate-200 align-top dark:border-slate-700">
                         <td className="whitespace-nowrap py-1.5 pr-2 font-mono text-xs">{it.date}{it.end && it.end !== it.date && <> –<br />{it.end}</>}</td>
-                        <td className="whitespace-nowrap pr-2 text-xs">{(() => { const d = daysBetween(today, it.date); return d === 0 ? 'today' : d > 0 ? `in ${d} d` : `${-d} d ago` })()}</td>
+                        <td className="whitespace-nowrap pr-2 text-xs">{fromToday(today, it.date)}</td>
                         <td className="pr-2 text-xs">{it.category}</td>
                         <td className="pr-2">{it.label}<Badge kind={it.kind} /></td>
                         <td className="text-xs text-slate-600 dark:text-slate-400">{it.source}</td>
@@ -280,7 +302,7 @@ export default function App() {
                   </tbody>
                 </table>
               </div>
-              <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 print:hidden">A new .ics download marks events you have removed since your last download in this browser as cancelled. Calendar apps may handle this differently, so check your calendar after importing.</p>
+              <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 print:hidden">Each move between two stations keeps its own calendar events. A new .ics download for the same move updates them and marks events you have removed since your last download in this browser as cancelled. Calendar apps may handle this differently, so check your calendar after importing.</p>
             </Card>
           )}
 

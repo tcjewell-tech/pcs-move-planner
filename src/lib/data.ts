@@ -62,6 +62,12 @@ export function zipStation(q: string, data: Bah | null = bah): Installation | nu
   return { id: `zip:${zip}`, name: `ZIP ${zip}`, aliases: [], state, zip, lat: null, lon: null }
 }
 
+/** Listed posts in the same housing area (MHA) as a typed-ZIP station: picking one gives stored miles. */
+export function listedInSameMha(station: Installation, data: Bah | null = bah): Installation[] {
+  const mha = isZipStation(station) ? bahFor(station, data)?.mha : undefined
+  return mha ? installations.filter((i) => bahFor(i, data)?.mha === mha) : []
+}
+
 /** OSRM driving miles; null when there is no road route or the pair is missing. */
 export function drivingMiles(a: string, b: string): number | null {
   if (a === b) return 0

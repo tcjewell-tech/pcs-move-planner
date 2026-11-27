@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { bah, bahFor, isZipStation, searchInstallations, type Installation } from './lib/data'
+import { bah, bahFor, isZipStation, listedInSameMha, searchInstallations, type Installation } from './lib/data'
 
 /** Typeahead over installation names, aliases and ZIP codes (ARIA 1.2 combobox pattern). */
 export function InstallationPicker({ label, value, onChange }: { label: string; value: Installation | null; onChange: (i: Installation) => void }) {
@@ -7,6 +7,13 @@ export function InstallationPicker({ label, value, onChange }: { label: string; 
   const [query, setQuery] = useState(value?.name ?? '')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
+  // Swap and Reset change the value from outside, so the text follows it (adjusting state while rendering, not in an effect).
+  const [shown, setShown] = useState(value?.id)
+  if (value?.id !== shown) {
+    setShown(value?.id)
+    setQuery(value?.name ?? '')
+  }
+  const sameArea = value ? listedInSameMha(value) : []
   const results = searchInstallations(query)
   const pick = (i: Installation) => {
     onChange(i)
@@ -68,6 +75,7 @@ export function InstallationPicker({ label, value, onChange }: { label: string; 
         <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
           ZIP {value.zip} · MHA {resolved ? `${resolved.mha} (${resolved.name})` : bah ? 'not found for this ZIP' : 'n/a (BAH data not built)'}
           {value.unverified && <span className="block text-amber-700 dark:text-amber-400">Unverified: {value.unverified}</span>}
+          {sameArea.length > 0 && <span className="block">Same housing area as {sameArea.map((i) => i.name).join(', ')}. Pick it for stored miles, or enter official DTOD miles below.</span>}
         </p>
       )}
     </div>
