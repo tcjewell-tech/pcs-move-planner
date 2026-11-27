@@ -8,6 +8,8 @@ describe('isPlanDate', () => {
   it.each(['2026-11-26', '1999-01-01', '2099-12-31'])('accepts %s', (d) => expect(isPlanDate(d)).toBe(true))
   // A date input emits values like these while the year is being typed.
   it.each(['', '0002-02-24', '202700-02-24', '2026-13-01'])('rejects "%s"', (d) => expect(isPlanDate(d)).toBe(false))
+  it.each(['2026-02-30', '2025-02-29', '2026-04-31', '2026-01-00'])('rejects the impossible date %s', (d) => expect(isPlanDate(d)).toBe(false))
+  it.each(['2028-02-29', '2000-02-29'])('accepts leap day %s', (d) => expect(isPlanDate(d)).toBe(true))
 })
 
 describe('povTravelDays (JTR 050205)', () => {
@@ -27,10 +29,13 @@ describe('povTravelSteps', () => {
 })
 
 describe('inputWarnings', () => {
-  const ok = { reportDate: '2027-01-15', noticeDate: '', vacateDate: '', milesUnknown: false, stations: [{ name: 'Fort Bragg' }] }
+  const ok = { reportDate: '2027-01-15', noticeDate: '', vacateDate: '', milesUnknown: false, stations: [{ id: 'bragg', name: 'Fort Bragg' }, { id: 'hood', name: 'Fort Hood' }] }
   it('is silent for good input', () => expect(inputWarnings(ok)).toEqual([]))
+  it('notes when both stations are the same', () => {
+    expect(inputWarnings({ ...ok, stations: [ok.stations[0], ok.stations[0]] }).join('\n')).toMatch(/stations are the same/)
+  })
   it('reports unknown miles, bad dates and unverified stations', () => {
-    const w = inputWarnings({ reportDate: '', noticeDate: '202700-01-01', vacateDate: '', milesUnknown: true, stations: [{ name: 'Test Post', unverified: 'no coordinates' }] }).join('\n')
+    const w = inputWarnings({ reportDate: '', noticeDate: '202700-01-01', vacateDate: '', milesUnknown: true, stations: [{ id: 'test', name: 'Test Post', unverified: 'no coordinates' }] }).join('\n')
     expect(w).toMatch(/No stored road distance/)
     expect(w).toMatch(/Enter a report date/)
     expect(w).toMatch(/notice or vacate date/)
@@ -221,6 +226,18 @@ describe('buildPlan', () => {
   it('keeps CONUS travel as a regulatory limit, and says nothing when there is no travel', () => {
     expect(buildPlan(base).items.find((i) => i.id === 'travel')).toMatchObject({ kind: 'regulatory limit', source: 'JTR par. 050205', label: 'Authorized travel: 3 day(s)' })
     expect(buildPlan({ ...base, oconus: true, travelDays: 0 }).warnings).toEqual([])
+  })
+  it('explains the one charged day when nothing else fills the DA 31 period', () => {
+    const zero = { ...base, leaveDays: 0, travelDays: 0, ptdyDays: 0 }
+    const r = buildPlan(zero)
+    expect([r.signOut, r.leave]).toEqual([base.reportDate, 1])
+    expect(r.warnings.join('\n')).toMatch(/You entered 0 leave days.*para 11-1g.*1 chargeable day/)
+    // Either day-charging box removes the charged day, and the note with it.
+    for (const c of [{ signOutDayWorked: true }, { signInDayNotCharged: true }]) {
+      const q = buildPlan({ ...zero, ...c })
+      expect(q.leave).toBe(0)
+      expect(q.warnings).toEqual([])
+    }
   })
   it('omits TLE windows for OCONUS', () => {
     expect(buildPlan({ ...base, oconus: true }).items.some((i) => i.id === 'tle-old' || i.id === 'tle-new')).toBe(false)

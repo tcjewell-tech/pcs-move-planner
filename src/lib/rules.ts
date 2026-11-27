@@ -15,7 +15,12 @@ export const addDays = (s: ISODate, n: number): ISODate => iso(new Date(toDate(s
 export const daysBetween = (a: ISODate, b: ISODate) => Math.round((toDate(b).getTime() - toDate(a).getTime()) / DAY_MS)
 export const isWeekend = (s: ISODate) => [0, 6].includes(toDate(s).getUTCDay())
 /** A complete, real date in 1900–2099. Check user-entered dates with this before any date math. */
-export const isPlanDate = (s: string) => /^(19|20)\d{2}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(toDate(s).getTime())
+export const isPlanDate = (s: string) => {
+  if (!/^(19|20)\d{2}-\d{2}-\d{2}$/.test(s)) return false
+  const d = toDate(s)
+  // A day past the month's end (2026-02-30) parses as a later date, so it must format back unchanged.
+  return !Number.isNaN(d.getTime()) && iso(d) === s
+}
 
 // ─── 1. POV travel days ──────────────────────────────────────────────────────
 
@@ -273,6 +278,8 @@ export function buildPlan(p: PlanInputs) {
 
   const warnings: string[] = []
   if (p.reportDate < p.today) warnings.push('Report date is in the past.')
+  // Only when nothing else fills the DA 31 period: its one day, the report day, is then charged.
+  if (leave > p.leaveDays) warnings.push(`You entered ${p.leaveDays} leave days, but the DA 31 still covers the report day, which is charged unless you work more than half of it or it is a non-duty day or holiday (AR 600-8-10 para 11-1g). That makes ${leave} chargeable day(s). Tick a "Day charging" box if one applies.`)
   if (p.oconus && p.travelDays > 0) warnings.push(`Alaska/Hawaii move: the ${p.travelDays} travel day(s) come from the driving formula, which is not verified for this move. Your departure date and leave depend on it — confirm with the transportation office.`)
   if (signOut < p.today) warnings.push(`Computed departure (${signOut}) is before today — reduce en-route leave or check the report date.`)
   if (p.ptdyDays > HOUSE_HUNTING_MAX_DAYS) warnings.push(`House hunting is limited to ${HOUSE_HUNTING_MAX_DAYS} days (AR 600-8-10 para 5-12c(9)).`)
@@ -289,11 +296,12 @@ export interface PlanSource {
   noticeDate: string
   vacateDate: string
   milesUnknown: boolean
-  stations: { name: string; unverified?: string }[]
+  stations: { id: string; name: string; unverified?: string }[]
 }
 
 export function inputWarnings(s: PlanSource): string[] {
   const w: string[] = []
+  if (s.stations.length === 2 && s.stations[0].id === s.stations[1].id) w.push('Current and gaining duty stations are the same. Check the stations in your orders.')
   if (s.milesUnknown) w.push('No stored road distance for this pair (a typed ZIP, or no road route, as with Hawaii) — enter official DTOD miles; travel days and the timeline are not computed.')
   if (!isPlanDate(s.reportDate)) w.push('Enter a report date between 1900 and 2099 to build the timeline.')
   if ([s.noticeDate, s.vacateDate].some((d) => d && !isPlanDate(d))) w.push('A notice or vacate date outside 1900–2099 is ignored.')
