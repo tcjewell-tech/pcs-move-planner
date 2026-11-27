@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { bah, bahFor, bahStaleWarning, distances, drivingMiles, installations, isOconus, listedInSameMha, searchInstallations, zipStation, type Bah } from './data'
-import { removedEvents, toIcs, toSaved } from './ics'
+import { removedEvents, replacedEvents, toIcs, toSaved } from './ics'
 import type { TimelineItem } from './rules'
 
 describe('installation search', () => {
@@ -135,6 +135,16 @@ describe('toIcs', () => {
     expect(next).toContain('SUMMARY:Removed from PCS plan: House hunting')
     expect(removedEvents(toSaved([travel], gone), [travel])).toEqual(gone) // still cancelled next time
     expect(removedEvents(toSaved([travel], gone), [travel, ptdy])).toEqual([])
+  })
+  it('cancels a replaced move\'s events under that move\'s UIDs, and keeps cancelling them', () => {
+    const travel: TimelineItem = { id: 'travel', date: '2027-01-07', label: 'Travel', category: 'En route', source: 's', kind: 'computed' }
+    const old = replacedEvents(toSaved([travel], []), 'leavenworth-to-bragg')
+    expect(old).toEqual([{ id: 'travel', date: '2027-01-07', label: 'Travel', planKey: 'leavenworth-to-bragg' }])
+    const out = toIcs([travel], move, old).replace(/\r\n /g, '')
+    expect(out).toMatch(/UID:bragg-to-leavenworth-travel@[^]*STATUS:CONFIRMED/)
+    expect(out).toMatch(/UID:leavenworth-to-bragg-travel@[^]*STATUS:CANCELLED/)
+    // Saved with the new move, the replaced event is cancelled again next time, though its ID is in the plan.
+    expect(removedEvents(toSaved([travel], old), [travel])).toEqual(old)
   })
   it.each([null, '', 'not json', '{}', '[null, 1, "x"]', '[{"id":"ptdy","date":"soon","label":"x"}]', '[{"id":"a\\r\\nB:1","date":"2027-01-10","label":"x"}]'])(
     'ignores unreadable saved events: %s', (saved) => expect(removedEvents(saved, [])).toEqual([]))

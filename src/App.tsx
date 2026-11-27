@@ -1,7 +1,7 @@
 import { useEffect, useState, type ChangeEvent, type FocusEvent, type ReactNode } from 'react'
 import { InstallationPicker } from './InstallationPicker'
 import { BAH_LOOKUP_URL, GRADES, bah, distances, installations } from './lib/data'
-import { removedEvents, toIcs, toSaved } from './lib/ics'
+import { removedEvents, replacedEvents, toIcs, toSaved } from './lib/ics'
 import { MAX_DAYS, MAX_MILES, capped, createMovePlan, defaultForm, fromSearch, normalizeDays, normalizeDueDay, normalizeMiles, toSearch, type PlannerFormState } from './lib/planner'
 import { HOUSE_HUNTING_MAX_DAYS, TLE_CONUS_MAX_DAYS, daysBetween, povTravelSteps, travelBasis, type Kind, type PtdyPlacement } from './lib/rules'
 
@@ -74,14 +74,15 @@ function useToday() {
 export default function App() {
   const [theme, setTheme] = useTheme()
   const today = useToday()
-  // The URL holds the whole form, so a bookmark or a texted link reopens the same plan.
-  const [form, setForm] = useState(() => fromSearch(window.location.search, localToday()))
+  // The URL holds the whole form, so a bookmark or a texted link reopens the same plan. It goes in the
+  // fragment (#…), which the browser never sends to the web host; older ?query links still open.
+  const [form, setForm] = useState(() => fromSearch(window.location.hash.slice(1) || window.location.search, localToday()))
   const [copied, setCopied] = useState('')
   const set = <K extends keyof PlannerFormState>(k: K) => (v: PlannerFormState[K]) => setForm((f) => ({ ...f, [k]: v }))
 
   useEffect(() => {
-    const q = `?${toSearch(form)}`
-    if (q !== window.location.search) window.history.replaceState(null, '', q)
+    const hash = `#${toSearch(form)}`
+    if (hash !== window.location.hash || window.location.search) window.history.replaceState(null, '', window.location.pathname + hash)
   }, [form])
   useEffect(() => {
     if (!copied) return
@@ -116,14 +117,30 @@ export default function App() {
     if (!plan || !form.from || !form.to || !m.planKey) return
     // The last download of this move, so events since removed from it can be cancelled. Another move keeps its own.
     const storeKey = `icsEvents:${m.planKey}`
+    const route = `${form.from.name} → ${form.to.name}`
     let saved: string | null = null
-    try { saved = localStorage.getItem(storeKey) } catch { /* storage blocked */ }
+    let last: { planKey?: unknown; route?: unknown } | null = null
+    try {
+      saved = localStorage.getItem(storeKey)
+      last = JSON.parse(localStorage.getItem('icsLastMove') ?? 'null')
+    } catch { /* storage blocked or unreadable */ }
     const removed = removedEvents(saved, plan.items)
+    // A different pair of stations is either a second PCS or a corrected one; only the user knows which.
+    if (last && typeof last.planKey === 'string' && typeof last.route === 'string' && last.planKey !== m.planKey
+      && window.confirm(`Your last calendar download was for ${last.route}.\n\nDoes this plan replace it (for example, you corrected a station)?\nOK: this file cancels those events.\nCancel: keep both moves in your calendar.`)) {
+      try {
+        removed.push(...replacedEvents(localStorage.getItem(`icsEvents:${last.planKey}`), last.planKey))
+        localStorage.removeItem(`icsEvents:${last.planKey}`)
+      } catch { /* storage blocked */ }
+    }
     const ics = toIcs(plan.items, { fromName: form.from.name, toName: form.to.name, planKey: m.planKey }, removed)
     const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }))
     Object.assign(document.createElement('a'), { href: url, download: 'pcs-timeline.ics' }).click()
     URL.revokeObjectURL(url)
-    try { localStorage.setItem(storeKey, toSaved(plan.items, removed)) } catch { /* storage blocked */ }
+    try {
+      localStorage.setItem(storeKey, toSaved(plan.items, removed))
+      localStorage.setItem('icsLastMove', JSON.stringify({ planKey: m.planKey, route }))
+    } catch { /* storage blocked */ }
   }
 
   return (
@@ -188,7 +205,7 @@ export default function App() {
           <Field label="En-route leave (chargeable days)" kind="planning default"><input {...numberProps('leaveDays')} /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="House-hunting PTDY days" kind="regulatory limit" hint={`Max ${HOUSE_HUNTING_MAX_DAYS}, commander approval`}>
-              <input {...numberProps('ptdyDays')} />
+              <input {...numberProps('ptdyDays')} max={HOUSE_HUNTING_MAX_DAYS} />
             </Field>
             <Field label="PTDY placement" kind="planning default">
               <select className="field" value={form.ptdyPlacement} onChange={(e) => set('ptdyPlacement')(e.target.value as PtdyPlacement)}>
@@ -215,7 +232,7 @@ export default function App() {
             <Field label="Notice delivered (optional)"><input type="date" className="field" value={form.noticeDate} onChange={(e) => set('noticeDate')(e.target.value)} /></Field>
             <Field label="Vacate by" kind="planning default" hint="Default: departure date"><input type="date" className="field" value={form.vacateDate} onChange={(e) => set('vacateDate')(e.target.value)} /></Field>
           </div>
-          <Field label="Official DTOD miles (override)" hint="DTOD is authoritative for entitlements (CAC required). Replaces the computed distance everywhere; 0 is a local move.">
+          <Field label="Official DTOD miles (override)" hint="DTOD is authoritative for entitlements (CAC required). Replaces the computed distance everywhere. 0 miles gives 0 travel days (unverified, see VERIFY.md).">
             <input {...numberProps('dtod')} placeholder={m.computedMiles?.toString() ?? 'required for this pair'} />
           </Field>
           <div className="grid grid-cols-2 gap-3">

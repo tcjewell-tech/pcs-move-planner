@@ -48,7 +48,8 @@ Status as of 2026-10-22. Items marked **OPEN** need a human check before you rel
 
 ## Calendar export
 
-- **OPEN:** importing an `.ics` again has not been tried in Google Calendar, Outlook or Apple Calendar. Re-exports keep each event's UID, raise `SEQUENCE`, and mark events removed since the last download in the same browser as `STATUS:CANCELLED`. A client may ignore any of these, and downloads from another browser or from before this change can't be cancelled. Since 2026-11-26 the UID also names the two stations, so events imported before that are a separate set: delete them by hand after importing a new download.
+- **OPEN:** importing an `.ics` again has not been tried in Google Calendar, Outlook or Apple Calendar. Re-exports keep each event's UID, raise `SEQUENCE`, and mark events removed since the last download in the same browser as `STATUS:CANCELLED`. A client may ignore any of these, and downloads from another browser or from before this change can't be cancelled. Since 2026-11-26 the UID also names the two stations, so events imported before that are a separate set: delete them by hand after importing a new download. When a download's stations differ from the last one, the app asks whether the new plan replaces the old move; if so, it cancels the old move's events too.
+- **OPEN:** 0 official DTOD miles gives 0 travel days (`povTravelDays(0)`), so a local move's timeline has no travel day. The JTR par. 050205 text quoted here starts at "one day for the first 400 miles" and doesn't address 0 miles; confirm how a local PCS is handled.
 
 ## Test scenarios
 

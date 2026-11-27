@@ -71,14 +71,21 @@ describe('share links', () => {
   })
   it('falls back to defaults for invalid values without throwing', () => {
     const d = defaultForm(today)
-    const f = fromSearch('?report=2026-02-30&leave=-10&tleOld=999&from=invalid&grade=Z-9&ptdyAt=x&deps=maybe&notice=soon&rent=abc', today)
+    const f = fromSearch('?report=2026-02-30&leave=-10&tleOld=999&grade=Z-9&ptdyAt=x&deps=maybe&notice=soon&rent=abc', today)
     expect(f.reportDate).toBe(d.reportDate)
     expect(f.leaveDays).toBe(d.leaveDays)
     expect(f.tleOld).toBe('365')
-    expect(f.from).toBe(d.from)
-    expect([f.grade, f.ptdyPlacement, f.withDeps, f.noticeDate, f.rentDueDay]).toEqual([d.grade, d.ptdyPlacement, d.withDeps, '', ''])
+    expect([f.grade, f.ptdyPlacement, f.withDeps, f.noticeDate, f.rentDueDay]).toEqual([d.grade, d.ptdyPlacement, d.withDeps, '', d.rentDueDay])
+    expect(fromSearch('rent=', today).rentDueDay).toBe('') // blank: no lease
     expect(fromSearch('%%%&&==', today)).toEqual(d)
     expect(fromSearch('', today)).toEqual(d)
+  })
+  it('leaves a station box empty when the link names one that no longer exists, so no wrong plan shows', () => {
+    for (const bad of ['invalid', 'zip:99999']) {
+      const f = fromSearch(`from=${bad}`, today)
+      expect(f.from).toBeNull()
+      expect(createMovePlan(f, today).plan).toBeNull()
+    }
   })
   it('reads a ZIP station with 0 DTOD miles', () => {
     const f = fromSearch('?from=zip:28310&dtod=0', today)

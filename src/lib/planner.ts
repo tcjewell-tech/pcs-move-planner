@@ -117,13 +117,17 @@ export function toSearch(f: PlannerFormState): string {
   return p.toString()
 }
 
-/** Reads a share link. Anything missing or invalid keeps its default; nothing here throws. */
+/**
+ * Reads a share link. Anything missing or invalid keeps its default, except a station the link names
+ * that no longer exists (a renamed post, a ZIP without rates): that box is left empty rather than
+ * showing a plan for the wrong move. Nothing here throws.
+ */
 export function fromSearch(search: string, today: ISODate, data: Bah | null = bundledBah): PlannerFormState {
   const d = defaultForm(today)
   const p = new URLSearchParams(search)
   const get = (k: string) => p.get(k)
   const station = (v: string | null, fallback: Installation | null) =>
-    v === null ? fallback : (byId(v) ?? (v.startsWith('zip:') ? zipStation(v.slice(4), data) : null) ?? fallback)
+    v === null || v === '' ? fallback : (byId(v) ?? (v.startsWith('zip:') ? zipStation(v.slice(4), data) : null))
   const count = (v: string | null, fallback: string) => (v !== null && v.trim() !== '' && Number(v) >= 0 ? normalizeDays(v) : fallback)
   const date = (v: string | null, fallback: string) => (v !== null && isPlanDate(v) ? v : fallback)
   const flag = (v: string | null, fallback: boolean) => (v === '1' ? true : v === '0' ? false : fallback)
@@ -140,7 +144,8 @@ export function fromSearch(search: string, today: ISODate, data: Bah | null = bu
     ptdyPlacement: PLACEMENTS.find((x) => x === get('ptdyAt')) ?? d.ptdyPlacement,
     signOutDayWorked: flag(get('soWorked'), d.signOutDayWorked),
     signInNotCharged: flag(get('siFree'), d.signInNotCharged),
-    rentDueDay: rent === null ? d.rentDueDay : normalizeDueDay(rent),
+    // Blank means no lease; anything else unreadable keeps the default.
+    rentDueDay: rent === null || (rent.trim() !== '' && !Number.isFinite(Number(rent))) ? d.rentDueDay : normalizeDueDay(rent),
     noticeDate: date(get('notice'), ''),
     vacateDate: date(get('vacate'), ''),
     tleOld: count(get('tleOld'), d.tleOld),
