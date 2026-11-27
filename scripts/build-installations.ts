@@ -62,6 +62,11 @@ for (const s of seed) {
   for (const a of s.aliases.filter(isFormerName)) {
     const t = resolve(aliasTitle(s, a))
     if (t === resolve(s.wiki)) continue
+    // The post's coordinates come from this article, so measuring it against them would prove nothing.
+    if (s.coordsWiki && t === resolve(s.coordsWiki)) {
+      report.push(`  note ${s.id}: alias "${a}" is the coordinates article "${t}" (set by hand in coordsWiki, no distance check)`)
+      continue
+    }
     const at = pages.get(t)?.coordinates?.[0]
     const km = at && coord ? haversineKm(coord.lat, coord.lon, at.lat, at.lon) : undefined
     if (km !== undefined && km <= MAX_KM) report.push(`  note ${s.id}: alias "${a}" is its own article "${t}", ${km.toFixed(1)} km away`)

@@ -11,7 +11,11 @@ import { UA, sleep } from './lib.ts'
 
 type Inst = { id: string; lat: number; lon: number }
 type Route = { code: string; routes?: { distance: number }[] }
-const insts: Inst[] = JSON.parse(readFileSync('src/data/installations.json', 'utf8'))
+type Listed = { id: string; lat: number | null; lon: number | null }
+const all: Listed[] = JSON.parse(readFileSync('src/data/installations.json', 'utf8'))
+// A post without coordinates (marked unverified) can't be routed; the UI asks for DTOD miles instead.
+const insts = all.filter((i): i is Inst => i.lat !== null && i.lon !== null)
+for (const i of all) if (!insts.includes(i as Inst)) console.log(`skipped ${i.id}: no coordinates`)
 const CACHE = 'scripts/.cache/osrm'
 mkdirSync(CACHE, { recursive: true })
 

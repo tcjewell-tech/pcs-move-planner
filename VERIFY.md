@@ -48,7 +48,7 @@ Status as of 2026-10-22. Items marked **OPEN** need a human check before you rel
 
 ## Calendar export
 
-- **OPEN:** importing an `.ics` again has not been tried in Google Calendar, Outlook or Apple Calendar. Re-exports keep each event's UID, raise `SEQUENCE`, and mark events removed since the last download in the same browser as `STATUS:CANCELLED`. A client may ignore any of these, and downloads from another browser or from before this change can't be cancelled.
+- **OPEN:** importing an `.ics` again has not been tried in Google Calendar, Outlook or Apple Calendar. Re-exports keep each event's UID, raise `SEQUENCE`, and mark events removed since the last download in the same browser as `STATUS:CANCELLED`. A client may ignore any of these, and downloads from another browser or from before this change can't be cancelled. Since 2026-11-26 the UID also names the two stations, so events imported before that are a separate set: delete them by hand after importing a new download.
 
 ## Test scenarios
 

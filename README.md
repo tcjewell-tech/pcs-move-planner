@@ -8,6 +8,8 @@ A local web app for U.S. Army Soldiers planning a CONUS permanent change of stat
 
 For a station that isn't listed, type its 5-digit ZIP code in either station box. BAH follows the ZIP; there is no stored distance, so enter official DTOD miles to get travel days and the timeline.
 
+The whole form is kept in the page address, so **Copy Share Link** gives a link that reopens the same plan (to bookmark, or to text a spouse or sponsor). **Reset** returns to the defaults. Each pair of stations keeps its own calendar events, so exporting a later PCS doesn't replace an earlier one.
+
 There are no API keys, no AI calls and no backend. All data ships with the app.
 
 > **Disclaimer.** This is a planning aid, not an entitlement determination. Confirm travel days, leave, TLE and BAH with your **S1**, **Finance (DMPO)**, the **transportation office**, and **legal assistance** (for lease termination). Official distances come from DTOD, not from this app.
@@ -20,6 +22,8 @@ npm run dev        # http://localhost:5173
 npm test           # Vitest: business rules, lookups, .ics export
 npm run build      # static build in dist/
 ```
+
+Pushes to `main` deploy `dist/` to GitHub Pages (`.github/workflows/deploy.yml`) once lint, tests and the build pass. This needs a one-time repo setting: **Settings → Pages → Source: GitHub Actions**.
 
 ## Refresh data each January
 
