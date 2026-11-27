@@ -167,6 +167,15 @@ export interface TimelineItem {
   kind: Kind
 }
 
+/**
+ * How a travel-day count may be presented. The par. 050205 formula has not been verified for
+ * Alaska/Hawaii moves (see VERIFY.md), so there it is only an estimate.
+ */
+export const travelBasis = (oconus: boolean): { title: string; note: string; source: string; kind: Kind } =>
+  oconus
+    ? { title: 'Estimated travel', note: ' (Alaska/Hawaii — confirm with the transportation office)', source: 'JTR par. 050205 formula, not verified for Alaska/Hawaii', kind: 'planning default' }
+    : { title: 'Authorized travel', note: '', source: 'JTR par. 050205', kind: 'regulatory limit' }
+
 export interface PlanInputs extends DayCharging {
   today: ISODate
   reportDate: ISODate
@@ -235,8 +244,9 @@ export function buildPlan(p: PlanInputs) {
     { id: 'sign-out', date: signOut, label: 'Sign out / depart (DA 31 "from" date)', category: 'Departure', source: `${AR} para 4-7b`, kind: 'computed' },
     { id: 'report', date: p.reportDate, label: 'Report to gaining unit (DA 31 "to" date = report date in orders)', category: 'Arrival', source: `PCS orders; ${AR} para 4-7b`, kind: 'regulatory limit' },
   ]
+  const { title, note, source, kind } = travelBasis(p.oconus)
   if (p.travelDays > 0)
-    items.push({ id: 'travel', date: travelStart, end: addDays(afterTravel, -1), label: `Authorized travel: ${p.travelDays} day(s)`, category: 'En route', source: 'JTR par. 050205', kind: 'regulatory limit' })
+    items.push({ id: 'travel', date: travelStart, end: addDays(afterTravel, -1), label: `${title}: ${p.travelDays} day(s)${note}`, category: 'En route', source, kind })
   if (leaveBeforeTravel > 0)
     items.push({ id: 'leave', date: leaveStart, end: addDays(travelStart, -1), label: `En-route leave (${leave} chargeable day(s) incl. sign-out/sign-in day charging)`, category: 'En route', source: `${AR} paras 4-7, 11-1`, kind: 'planning default' })
   if (p.ptdyDays > 0)
@@ -263,6 +273,7 @@ export function buildPlan(p: PlanInputs) {
 
   const warnings: string[] = []
   if (p.reportDate < p.today) warnings.push('Report date is in the past.')
+  if (p.oconus && p.travelDays > 0) warnings.push(`Alaska/Hawaii move: the ${p.travelDays} travel day(s) come from the driving formula, which is not verified for this move. Your departure date and leave depend on it — confirm with the transportation office.`)
   if (signOut < p.today) warnings.push(`Computed departure (${signOut}) is before today — reduce en-route leave or check the report date.`)
   if (p.ptdyDays > HOUSE_HUNTING_MAX_DAYS) warnings.push(`House hunting is limited to ${HOUSE_HUNTING_MAX_DAYS} days (AR 600-8-10 para 5-12c(9)).`)
   if (!p.oconus && tleCheck(p.tleOld, p.tleNew).overLimit) warnings.push(`TLE split totals ${p.tleOld + p.tleNew} days; CONUS limit is ${TLE_CONUS_MAX_DAYS} (JTR par. 050601).`)

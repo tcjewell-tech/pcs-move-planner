@@ -210,6 +210,18 @@ describe('buildPlan', () => {
     expect(ids(full)).toHaveLength(15)
     expect(ids({ ...full, today: '2026-11-01', reportDate: '2027-03-01', ptdyPlacement: 'after-departure' })).toEqual(ids(full))
   })
+  it('presents Alaska/Hawaii travel as an estimate, with a warning', () => {
+    const r = buildPlan({ ...base, oconus: true })
+    const travel = r.items.find((i) => i.id === 'travel')!
+    expect(travel.kind).toBe('planning default')
+    expect(travel.label).toMatch(/^Estimated travel: 3 day.*confirm with the transportation office/)
+    expect(travel.source).toMatch(/not verified/)
+    expect(r.warnings.join('\n')).toMatch(/Alaska\/Hawaii move: the 3 travel day/)
+  })
+  it('keeps CONUS travel as a regulatory limit, and says nothing when there is no travel', () => {
+    expect(buildPlan(base).items.find((i) => i.id === 'travel')).toMatchObject({ kind: 'regulatory limit', source: 'JTR par. 050205', label: 'Authorized travel: 3 day(s)' })
+    expect(buildPlan({ ...base, oconus: true, travelDays: 0 }).warnings).toEqual([])
+  })
   it('omits TLE windows for OCONUS', () => {
     expect(buildPlan({ ...base, oconus: true }).items.some((i) => i.id === 'tle-old' || i.id === 'tle-new')).toBe(false)
   })

@@ -35,6 +35,7 @@ Status as of 2026-10-22. Items marked **OPEN** need a human check before you rel
 ## Regulations
 
 - **JTR par. 050205 (travel days):** I could not fetch the JTR directly (travel.dod.mil blocks automated access). The formula is confirmed by DoD UTD/CTD MAP-CAP 46-26(I), 30 Jul 2026, which quotes 050205. It matches the spec.
+- **OPEN:** whether par. 050205's driving formula applies to Alaska and Hawaii moves has not been checked against the JTR. For those moves the app labels the count "Estimated travel" (planning default) and warns the user.
 - **JTR par. 050601 (TLE, 21 days CONUS):** confirmed by the DTMO announcement (effective 27 Nov 2024) and an Army MPO PCS sheet dated 21 Jan 2026. **OPEN:** check against the current JTR text. Housing-shortage MHAs can get up to 60 days; the app shows this as a note only.
 - **AR 600-8-10, 3 Jun 2020 (still current):** I read the text directly.
   - **Differs from the spec:** the regulation no longer says "PTDY". House hunting is an *administrative absence*, para 5-12c(9). The UI keeps the familiar "PTDY" label and cites the new term.

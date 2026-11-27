@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { InstallationPicker } from './InstallationPicker'
 import { BAH_LOOKUP_URL, GRADES, bah, bahFor, bahStaleWarning, distances, drivingMiles, installations, isOconus, type Installation } from './lib/data'
 import { toIcs } from './lib/ics'
-import { DEFAULTS, HOUSE_HUNTING_MAX_DAYS, TLE_CONUS_MAX_DAYS, addDays, buildPlan, daysBetween, inputWarnings, isPlanDate, isWeekend, povTravelDays, povTravelSteps, type Kind, type PtdyPlacement } from './lib/rules'
+import { DEFAULTS, HOUSE_HUNTING_MAX_DAYS, TLE_CONUS_MAX_DAYS, addDays, buildPlan, daysBetween, inputWarnings, isPlanDate, isWeekend, povTravelDays, povTravelSteps, travelBasis, type Kind, type PtdyPlacement } from './lib/rules'
 
 const today = new Date().toLocaleDateString('en-CA') // local YYYY-MM-DD
 const byId = (id: string) => installations.find((i) => i.id === id) ?? null
@@ -216,8 +216,8 @@ export default function App() {
                       {povTravelSteps(miles).map((line) => <span key={line} className="block">{line}</span>)}
                     </dd>
                   </div>
-                  <div className="text-base"><dt className="inline font-medium">Authorized travel days: </dt><dd className="inline font-bold">{travelDays}</dd><Badge kind="regulatory limit" /></div>
-                  {oconus && <p className="text-xs text-amber-700 dark:text-amber-400">Alaska/Hawaii move: travel time depends on mode and ports; TLE OCONUS rules are out of scope for v1.</p>}
+                  <div className="text-base"><dt className="inline font-medium">{travelBasis(oconus).title} days: </dt><dd className="inline font-bold">{travelDays}</dd><Badge kind={travelBasis(oconus).kind} /></div>
+                  {oconus && <p className="text-xs text-amber-700 dark:text-amber-400">Alaska/Hawaii move: this count is not verified for it, because travel time depends on mode and ports. TLE OCONUS rules are out of scope for v1.</p>}
                 </dl>
               )}
             </Card>
